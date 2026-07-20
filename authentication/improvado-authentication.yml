@@ -1,0 +1,43 @@
+generated: '2026-07-19'
+method: searched
+source: https://developers.improvado.io/auth
+docs: https://developers.improvado.io/auth
+summary:
+  types: [http]
+  http_schemes: [basic, bearer]
+  api_key_in: [header]
+  oauth2_flows: []
+  notes: >-
+    Two-stage model. HTTP Basic (RFC 7617) is used for workspace-management
+    operations and to obtain a workspace-scoped access token; the resulting Bearer
+    token is used for all workspace-scoped resources. A cookie/session variant
+    (dts_session_id) with an X-IM-WORKSPACE-ID header scopes embedded-UI sessions.
+schemes:
+- name: basicAuth
+  type: http
+  scheme: basic
+  description: >-
+    RFC 7617 HTTP Basic. Credentials (username:password, base64) are provisioned by
+    Improvado for Embedded API access; the customer changes the password on first use.
+    Required for workspace management and for calling POST /api/v3/token to mint a
+    workspace-scoped Bearer token. Invalid credentials return 401 Unauthorized.
+  used_for: [workspace management, token acquisition]
+- name: bearerToken
+  type: http
+  scheme: bearer
+  bearerFormat: opaque
+  description: >-
+    Workspace-scoped access token obtained from POST /api/v3/token. Sent as
+    Authorization: Bearer <token>. Required for workspace-specific resources
+    (connections, accounts, extracts, destinations, data tables, loads, recipes,
+    roles, webhooks). Token TTL is 30 minutes, renewed on each authorized use;
+    an invalid or expired token returns 401 Unauthorized.
+  used_for: [workspace-scoped resources]
+- name: cookieSession
+  type: apiKey
+  in: cookie
+  parameterName: dts_session_id
+  description: >-
+    Cookie-based session used by embedded-UI (iframe) flows, combined with an
+    X-IM-WORKSPACE-ID request header to scope the session to a workspace.
+  used_for: [embedded iframe UI]
