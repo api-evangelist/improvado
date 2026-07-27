@@ -1,0 +1,52 @@
+generated: '2026-07-19'
+method: searched
+source: https://developers.improvado.io/api/webhooks
+spec_type: Webhooks
+type: Webhooks
+transport: https-outbound
+description: >-
+  Improvado Embedded API v3 delivers event notifications to customer-registered HTTPS
+  endpoints. Endpoints are managed via the /api/v3/webhook_endpoints/ resource; available
+  event types are discoverable at GET /api/v3/webhook_event_types/ (do not hardcode).
+management_operations:
+- GET /api/v3/webhook_endpoints/          # list endpoints
+- POST /api/v3/webhook_endpoints/         # create endpoint
+- GET /api/v3/webhook_endpoints/{id}/     # get endpoint
+- PATCH /api/v3/webhook_endpoints/{id}/   # update endpoint
+- DELETE /api/v3/webhook_endpoints/{id}/  # delete endpoint
+- POST /api/v3/webhook_endpoints/{id}/verify/            # verify endpoint
+- POST /api/v3/webhook_endpoints/{id}/regenerate_secret/ # rotate signing secret
+- GET /api/v3/webhook_event_types/        # list available event types
+event_types:
+- name: load_started
+  description: A load has started.
+- name: load_completed
+  description: A load has completed.
+- name: transformation_started
+  description: A transformation has started.
+- name: transformation_completed
+  description: A transformation has completed.
+- name: extraction_created
+  description: An extraction has been created.
+- name: extraction_paused
+  description: An extraction has been paused.
+security:
+  signature_header: X-Improvado-Signature
+  algorithm: HMAC-SHA256
+  detail: >-
+    Each delivery includes an X-Improvado-Signature header containing an HMAC-SHA256
+    signature computed with the endpoint's signing secret, authenticating that the
+    request originated from Improvado. The signing secret can be rotated via the
+    regenerate_secret operation.
+idempotency:
+  header: X-Improvado-Idempotency-Key
+  detail: Present on deliveries so receivers can de-duplicate retries.
+retry_policy:
+  max_attempts: 4
+  backoff_seconds: [0, 2, 5, 10]
+  receiver_contract: Respond 2xx within seconds to acknowledge.
+verification_flow:
+  detail: >-
+    During setup Improvado sends a GET request carrying X-Improvado-Verify-Token and
+    X-Improvado-Challenge headers; the receiver must respond HTTP 200 and echo the
+    challenge value in the response body to activate the endpoint.

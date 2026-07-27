@@ -1,0 +1,16 @@
+generated: '2026-07-19'
+method: searched
+probe: true
+source: https://trust.improvado.io/
+url: https://trust.improvado.io/
+certifications:
+- SOC 2
+- HIPAA
+- GDPR
+evidence:
+- source: https://trust.improvado.io/
+  keywords:
+  - soc 2
+  - hipaa
+  - trust center
+  - gdpr

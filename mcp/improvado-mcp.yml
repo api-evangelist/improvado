@@ -1,0 +1,69 @@
+generated: '2026-07-19'
+method: derived
+status: candidate
+source: https://developers.improvado.io/api
+note: >-
+  No official hosted/remote Improvado MCP server was found (mcp.improvado.io does not
+  resolve; no @modelcontextprotocol package published). Improvado does expose a public
+  natural-language expert endpoint (POST https://agent.improvado.io/ask, see llms.txt)
+  but that is a Q&A endpoint, not an MCP server. The tools below are a CANDIDATE surface
+  derived one-per-operation from the documented Embedded API v3 reference — a starting
+  point for a future MCP server, not a published one.
+server:
+  name: improvado
+  transport: http
+tools:
+- name: create_token
+  description: Mint a workspace-scoped Bearer token.
+  source_operation: POST /api/v3/token
+- name: list_workspaces
+  description: List workspaces.
+  source_operation: GET /api/v3/workspaces
+- name: create_workspace
+  description: Create a workspace.
+  source_operation: POST /api/v3/workspaces
+- name: list_datasources
+  description: List available data sources.
+  source_operation: GET /api/v3/datasources
+- name: list_datasource_connections
+  description: List connections for a data source.
+  source_operation: GET /api/v3/datasources/{datasource_name}/connections
+- name: generate_external_auth_links
+  description: Generate one-time external authentication links for a data source.
+  source_operation: POST /api/v3/datasources/{datasource_name}/external-auth-links
+- name: list_extracts
+  description: List extracts.
+  source_operation: GET /api/v3/extracts
+- name: create_extract
+  description: Create an extract.
+  source_operation: POST /api/v3.1/extracts/
+- name: run_extract
+  description: Run an extract.
+  source_operation: POST /api/v3/extracts/{id}/run
+- name: list_destinations
+  description: List destinations.
+  source_operation: GET /api/v3/destinations
+- name: list_data_tables
+  description: List data tables.
+  source_operation: GET /api/v3/data-tables
+- name: update_data_table
+  description: Update a data table's selected fields.
+  source_operation: PUT /api/v3/data-tables/{data_table_id}
+- name: list_loads
+  description: List loads.
+  source_operation: GET /api/v3/loads
+- name: create_load
+  description: Create a load.
+  source_operation: POST /api/v3/loads
+- name: run_load
+  description: Run a load.
+  source_operation: PUT /api/v3/loads/{id}/run
+- name: list_webhook_endpoints
+  description: List webhook endpoints.
+  source_operation: GET /api/v3/webhook_endpoints/
+- name: create_webhook_endpoint
+  description: Create a webhook endpoint.
+  source_operation: POST /api/v3/webhook_endpoints/
+- name: list_webhook_event_types
+  description: List available webhook event types.
+  source_operation: GET /api/v3/webhook_event_types/

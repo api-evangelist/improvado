@@ -1,0 +1,20 @@
+generated: '2026-07-19'
+method: searched
+host: https://improvado.io
+documents:
+- path: /.well-known/security.txt          # RFC 9116
+  status: 200
+  file: improvado-security.txt
+- path: /.well-known/openid-configuration   # OIDC discovery
+  status: 301
+- path: /.well-known/oauth-authorization-server  # RFC 8414
+  status: 301
+- path: /.well-known/api-catalog             # RFC 9727
+  status: 301
+- path: /.well-known/ai-plugin.json
+  status: 404
+notes: >-
+  API host embedded.improvado.io returned 404 for /.well-known/openid-configuration
+  and /.well-known/oauth-authorization-server (no OIDC/OAuth discovery surface; the
+  Embedded API uses HTTP Basic + Bearer tokens, not OAuth2). Only the marketing host
+  improvado.io publishes a well-known document (security.txt).

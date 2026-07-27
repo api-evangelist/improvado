@@ -1,0 +1,33 @@
+generated: '2026-07-19'
+method: searched
+source: https://developers.improvado.io/introduction
+type: ErrorCatalog
+format: custom-json
+envelope:
+  content_type: application/json
+  shape: '{"details": "error description"}'
+  field: details
+  rfc9457: false
+notes: >-
+  Improvado has no OpenAPI spec published, so a full 4xx/5xx problem-type catalog cannot
+  be derived mechanically. The entries below are the HTTP status conditions explicitly
+  documented across the auth, changelog, and endpoint reference pages. Per-endpoint error
+  conditions are documented on each operation in the API reference.
+errors:
+- status: 400
+  title: Bad Request
+  meaning: >-
+    Validation failure — e.g. attempting to deselect dimension fields on a data table,
+    or an extraction-template validation whose accounts span multiple connections or
+    reference accounts that do not exist.
+  source: changelog (2026-07-14 data-tables, 2026-06-15 validation)
+- status: 401
+  title: Unauthorized
+  meaning: Invalid Basic credentials, or an invalid/expired Bearer token.
+  source: https://developers.improvado.io/auth
+- status: 403
+  title: Forbidden
+  meaning: >-
+    Feature not enabled for the workspace — e.g. external authentication links require the
+    agency feature flag; the endpoint returns 403 otherwise.
+  source: changelog (2026-07-14 external authentication links)

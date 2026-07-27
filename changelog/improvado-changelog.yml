@@ -1,0 +1,61 @@
+generated: '2026-07-19'
+method: searched
+source: https://developers.improvado.io/changelog
+type: ChangeLog
+scheme: date-based
+current_version: v3
+notes: >-
+  Dated, human-readable changelog for the Improvado Embedded API v3. Entries are tagged
+  Added / Changed. Recent window captured verbatim from the published changelog; the
+  live changelog is the source of truth.
+entries:
+- date: '2026-07-14'
+  changes:
+  - kind: added
+    highlight: Update a data table (field selection)
+    detail: >-
+      New PUT /api/v3/data-tables/{data_table_id} controls which fields (columns) of a
+      data table are delivered by its loads. Request body takes selected_fields (full list
+      of field names to select; unlisted fields are deselected). Set at the data-table level,
+      affecting all loads. Dimension fields cannot be deselected (returns 400). Returns the
+      DataTableDetail payload.
+- date: '2026-07-14'
+  changes:
+  - kind: added
+    highlight: External authentication links
+    detail: >-
+      New endpoints to request data-source credentials from an external user (agency end
+      client): POST/GET /api/v3/datasources/{datasource_name}/external-auth-links and
+      POST .../{id}/revoke. Links are single-use, expire after 14 days, revocable, and
+      can be self-delivered (send_email:false). Requires the agency external-auth feature
+      flag or the endpoint returns 403.
+- date: '2026-06-15'
+  changes:
+  - kind: changed
+    breaking: true
+    highlight: Extraction template validation request format
+    detail: >-
+      POST /api/v3/extract-template/{template_id}/validation/ now takes embedded account IDs
+      (integers) under a non-empty accounts list; field/custom-setting/dynamic-field inputs
+      moved under an optional template_settings object; top-level connection_id, fields,
+      custom_settings and string accounts removed. Returns 400 when accounts span multiple
+      connections or do not exist.
+  - kind: added
+    highlight: Get extraction template by id
+    detail: >-
+      GET /api/v3/extract-template/{template_id}/ returns a compact template representation
+      (id, datasource_name, is_wide_template).
+  - kind: added
+    highlight: Account identifiers on extract objects
+    detail: >-
+      Extract responses now include account_entity_id and account_embedded_id (nullable).
+- date: '2026-06-05'
+  changes:
+  - kind: added
+    highlight: Wide report extract migration
+    detail: >-
+      POST /api/v3/extracts/migrate-wide performs non-destructive dimension changes by
+      creating a new extract with a new data table and pausing the original (its data stays
+      queryable). Omitted settings are pre-filled from the source extract.
+  - kind: changed
+    highlight: is_wide_template flag on extract template objects

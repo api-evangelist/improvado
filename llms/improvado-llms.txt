@@ -1,0 +1,92 @@
+# Improvado API v3
+
+> Documentation files for Large Language Models
+
+## Documentation
+
+- [System Fields](/system-fields.md)
+- [Rate limits](/rate-limits.md)
+- [Pagination](/pagination.md)
+- [Getting started](/introduction.md)
+- [/changelog](/changelog.md): A chronological log of changes to the Improvado Embedded API v3.
+- [Authorization](/auth.md)
+
+# API Reference
+
+## Improvado Embedded API v3
+
+- POST /api/v3/token: Create a token
+- GET /api/v3/workspaces: List workspaces
+- POST /api/v3/workspaces: Create a workspace
+- GET /api/v3/workspaces/{id}: Get a workspace
+- PUT /api/v3/workspaces/{id}: Update a workspace
+- GET /api/v3/workspaces/{id}/dashboards: List workspace dashboards
+- POST /api/v3/workspaces/{id}/recipes: Enable recipe in a workspace
+- POST /api/v3/get_iframe_url: Get iframe URL
+- GET /api/v3/recipes: List agency recipes
+- GET /api/v3/datasources: List data sources
+- GET /api/v3/datasources/{datasource_name}/connections: List data source connections
+- DELETE /api/v3/datasources/{datasource_name}/connections/{id}: Delete a connection
+- POST /api/v3/datasources/{datasource_name}/external-auth-links: Generate external authentication links
+- GET /api/v3/datasources/{datasource_name}/external-auth-links: List external authentication links
+- POST /api/v3/datasources/{datasource_name}/external-auth-links/{id}/revoke: Revoke an external authentication link
+- DELETE /api/v3/connections/{connection_id}: Delete a connection
+- GET /api/v3/connections/{connection_id}/accounts: List accounts for connection
+- PATCH /api/v3/connections/{connection_id}/accounts: Update accounts
+- PATCH /api/v3/connections/{connection_id}/accounts/{account_id}: Update an account
+- GET /api/v3/datasources/{datasource_name}/extract-templates: List extraction templates for a datasource
+- POST /api/v3/datasources/{datasource_name}/extract-templates: Create an extraction template
+- GET /api/v3/datasources/{datasource_name}/extract-templates/{id}: Get an extraction template
+- GET /api/v3/extract-template/{template_id}/: Get an extraction template by id
+- POST /api/v3/extract-template/{template_id}/preview/: Preview extraction template data
+- POST /api/v3/extract-template/{template_id}/validation/: Validate extraction template settings
+- POST /api/v3/datasources/{datasource_name}/custom_setting_options/: Load custom setting options
+- GET /api/v3/extracts: List extracts
+- POST /api/v3.1/extracts/: Create extract
+- GET /api/v3/extracts/{id}: Get an extract
+- PUT /api/v3/extracts/{id}: Update an extract
+- PATCH /api/v3/extracts/{id}: Update an extract partially
+- POST /api/v3/extracts/{id}/run: Run an extract
+- POST /api/v3/extracts/{extract_id}/pause: Pause an extract
+- POST /api/v3/extracts/{extract_id}/unpause: Unpause an extract
+- POST /api/v3/extracts/migrate-wide: Migrate a wide report extract
+- GET /api/v3/destinations: List of destinations
+- GET /api/v3/destinations/{destination_name}/connections: List destination connections
+- POST /api/v3/destinations/{destination_name}/connections: Create a connection
+- GET /api/v3/destinations/{destination_name}/connections/{id}: Get a connection
+- PATCH /api/v3/destinations/{destination_name}/connections/{id}: Update a connection
+- PUT /api/v3/destinations/{destination_name}/connections/{id}: Reauthorize a connection
+- PUT /api/v3/destinations/{destination_name}/connections/{destination_connection_id}/recheck: Check connection status
+- GET /api/v3/data-tables: List data tables
+- GET /api/v3/data-tables/{data_table_id}: Get a data table
+- PUT /api/v3/data-tables/{data_table_id}: Update a data table
+- GET /api/v3/loads: List loads
+- POST /api/v3/loads: Create a load
+- GET /api/v3/loads/{load_id}: Get a load
+- PUT /api/v3/loads/{load_id}: Update a load
+- DELETE /api/v3/loads/{load_id}: Delete a load
+- PUT /api/v3/loads/{id}/pause: Pause a load
+- PUT /api/v3/loads/{id}/unpause: Unpause a load
+- PUT /api/v3/loads/{id}/run: Run a load
+- GET /api/v3/automated-recipe-templates: List automated recipe templates
+- GET /api/v3/automated-recipe-templates/{template_id}: Get automated recipe template detail
+- GET /api/v3/automated-recipes: List automated recipes
+- POST /api/v3/automated-recipes: Create automated recipe
+- GET /api/v3/automated-recipes/{recipe_id}: Get automated recipe detail
+- PUT /api/v3/automated-recipes/{recipe_id}: Update automated recipe configuration
+- POST /api/v3/automated-recipes/{recipe_id}/build: Build automated recipe
+- GET /api/v3/webhook_endpoints/: List webhook endpoints
+- POST /api/v3/webhook_endpoints/: Create a webhook endpoint
+- GET /api/v3/webhook_endpoints/{id}/: Get a webhook endpoint
+- PATCH /api/v3/webhook_endpoints/{id}/: Update a webhook endpoint
+- DELETE /api/v3/webhook_endpoints/{id}/: Delete a webhook endpoint
+- POST /api/v3/webhook_endpoints/{id}/verify/: Verify a webhook endpoint
+- POST /api/v3/webhook_endpoints/{id}/regenerate_secret/: Rotate the signing secret
+- GET /api/v3/webhook_event_types/: List available webhook event types
+- GET /api/v3/roles/: List roles
+- POST /api/v3/roles/: Create a custom role
+- GET /api/v3/roles/permissions: Permissions catalog
+- GET /api/v3/roles/{role_id}: Get a role
+- PATCH /api/v3/roles/{role_id}: Update a custom role
+- DELETE /api/v3/roles/{role_id}: Delete a custom role
+- GET /api/v3/roles/{role_id}/users: List users assigned to a role

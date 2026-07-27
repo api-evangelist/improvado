@@ -1,0 +1,28 @@
+generated: '2026-07-19'
+method: generated
+source: https://developers.improvado.io/api
+note: >-
+  Improvado publishes no OpenAPI spec, so skill steps are grounded in the provider's
+  documented Embedded API v3 operations (METHOD + path, verbatim from the API reference
+  and llms.txt) rather than operationIds. No operations invented.
+skills:
+- file: improvado-connect-and-extract.md
+  name: Connect a data source and run an extract
+  api: Improvado Embedded API v3
+  operations:
+  - POST /api/v3/token
+  - GET /api/v3/datasources
+  - GET /api/v3/datasources/{datasource_name}/connections
+  - GET /api/v3/datasources/{datasource_name}/extract-templates
+  - POST /api/v3.1/extracts/
+  - POST /api/v3/extracts/{id}/run
+  - GET /api/v3/extracts/{id}
+- file: improvado-register-webhook.md
+  name: Register and verify a webhook endpoint
+  api: Improvado Embedded API v3
+  operations:
+  - POST /api/v3/token
+  - GET /api/v3/webhook_event_types/
+  - POST /api/v3/webhook_endpoints/
+  - POST /api/v3/webhook_endpoints/{id}/verify/
+  - POST /api/v3/webhook_endpoints/{id}/regenerate_secret/

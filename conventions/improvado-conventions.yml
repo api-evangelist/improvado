@@ -1,0 +1,68 @@
+generated: '2026-07-19'
+method: searched
+source: https://developers.improvado.io/api
+docs:
+  authorization: https://developers.improvado.io/auth
+  pagination: https://developers.improvado.io/pagination
+  rate_limits: https://developers.improvado.io/rate-limits
+  system_fields: https://developers.improvado.io/system-fields
+  getting_started: https://developers.improvado.io/introduction
+base_url: https://embedded.improvado.io
+authentication:
+  style: http-basic-then-bearer
+  detail: >-
+    Basic auth for workspace management and token minting; 30-minute Bearer tokens for
+    workspace-scoped resources. See authentication/improvado-authentication.yml.
+  workspace_scope_header: X-IM-WORKSPACE-ID
+versioning:
+  scheme: uri-path
+  current: v3
+  note: >-
+    Version prefix in the path (/api/v3/). A small number of operations are exposed
+    under /api/v3.1/ (e.g. POST /api/v3.1/extracts/) for newer request shapes.
+  cross_link: lifecycle/improvado-lifecycle.yml
+pagination:
+  style: page-number
+  params:
+    page: page number to return (default 1)
+    page_size: items per page (default 100)
+  response_fields:
+    count: total number of items
+    next: URL of the next page (null on last page)
+    previous: URL of the previous page (null on first page)
+    results: array of items
+  sort: results are ordered by id
+idempotency:
+  supported: true
+  mechanism: webhook-delivery
+  header: X-Improvado-Idempotency-Key
+  detail: >-
+    Webhook deliveries carry an X-Improvado-Idempotency-Key header so receivers can
+    de-duplicate retried deliveries safely (deliveries are retried up to 4 times with
+    backoff [0s, 2s, 5s, 10s]). The request API itself does not document a client-supplied
+    idempotency key; safe-retry idempotency is provided on the event-delivery channel.
+  cross_link: asyncapi/improvado-webhooks.yml
+error_envelope:
+  format: custom-json
+  content_type: application/json
+  shape: '{"details": "error description"}'
+  rfc9457: false
+  note: >-
+    Errors return an HTTP status plus a JSON body with a single "details" string.
+    Per-endpoint error conditions are documented on each operation. Not RFC 9457
+    application/problem+json.
+  cross_link: errors/improvado-error-codes.yml
+rate_limiting:
+  enforced: true
+  values_published: false
+  note: >-
+    Docs state all API methods enforce rate limits (max requests per period) but the
+    exact values, informational headers, and error shape are documented as "described
+    later" and are not yet published. No numeric limits captured (no fabrication).
+system_fields:
+  description: >-
+    Improvado adds platform-level system fields to every data table.
+  fields:
+  - account_id
+  - account_name
+  - __insert_date

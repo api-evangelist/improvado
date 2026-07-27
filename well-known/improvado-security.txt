@@ -1,0 +1,5 @@
+Contact: mailto:security@improvado.io
+Expires: 2027-05-01T00:00:00.000Z
+Policy: https://improvado.io/company-legal/responsible-disclosure-policy
+Preferred-Languages: en
+Canonical: https://improvado.io/.well-known/security.txt

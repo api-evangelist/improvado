@@ -1,0 +1,33 @@
+generated: '2026-07-19'
+method: searched
+source: https://trust.improvado.io/
+type: Conformance
+compliance_page: https://trust.improvado.io
+standards:
+- id: soc2
+  conforms: true
+  evidence: SOC 2 listed on trust.improvado.io trust center
+- id: hipaa
+  conforms: true
+  evidence: HIPAA listed on trust.improvado.io trust center
+- id: gdpr
+  conforms: true
+  evidence: GDPR listed on trust.improvado.io trust center; DPA published under company legal
+- id: http-basic-rfc7617
+  conforms: true
+  evidence: docs cite RFC 7617 HTTP Basic for workspace management/token acquisition
+- id: bearer-token
+  conforms: true
+  evidence: Authorization Bearer tokens for workspace-scoped resources (30-min TTL)
+- id: oauth2
+  conforms: false
+  evidence: no OAuth2 securityScheme or OIDC/OAuth discovery documents (well-known 404)
+- id: rfc9457-problem-details
+  conforms: false
+  evidence: 'error envelope is custom {details: string}, not application/problem+json'
+- id: webhook-hmac-sha256
+  conforms: true
+  evidence: webhook deliveries signed with HMAC-SHA256 via X-Improvado-Signature
+- id: pagination-page-number
+  conforms: true
+  evidence: page/page_size params with count/next/previous/results envelope

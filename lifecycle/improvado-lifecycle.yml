@@ -1,0 +1,26 @@
+generated: '2026-07-19'
+method: searched
+source: https://developers.improvado.io/api
+type: Lifecycle
+versioning:
+  scheme: uri-path
+  current: v3
+  variants:
+  - v3.1   # newer request shapes for select operations (e.g. POST /api/v3.1/extracts/)
+  docs: https://developers.improvado.io/introduction
+changelog:
+  url: https://developers.improvado.io/changelog
+  artifact: changelog/improvado-changelog.yml
+status_page: https://status.improvado.io
+sla:
+  url: https://improvado.io/company-legal/support-services-2023-06-28
+  note: Support & SLAs published under company legal (Support Services agreement).
+deprecation:
+  policy_url: null
+  sunset_header: null
+  note: >-
+    No formal deprecation policy or RFC 8594 Sunset/Deprecation header support found in
+    the published docs. Breaking changes are announced in the dated changelog (e.g. the
+    2026-06-15 extraction-template validation request-format change). Not asserting a
+    Deprecation pointer (no policy page to cite).
+deprecated_operations: []

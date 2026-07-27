@@ -1,0 +1,107 @@
+generated: '2026-07-19'
+method: derived
+source: https://developers.improvado.io/api
+type: DataModel
+note: >-
+  Entity graph derived from the documented Embedded API v3 resource paths and changelog
+  (no OpenAPI published, so relationships are inferred from path nesting and documented
+  id-reference fields, not from $ref links). Workspace is the multi-tenancy root; nearly
+  every resource is workspace-scoped.
+entities:
+- name: Workspace
+  key: id
+  description: Isolated tenant containing all connections, extracts, data tables, and loads.
+  relationships:
+  - has_many: Connection
+  - has_many: Extract
+  - has_many: DataTable
+  - has_many: Load
+  - has_many: Role
+  - has_many: Dashboard
+- name: DataSource
+  key: datasource_name
+  description: A marketing/ads/analytics platform Improvado can extract from (876+ sources).
+  relationships:
+  - has_many: Connection
+    via: datasource_name
+  - has_many: ExtractTemplate
+    via: datasource_name
+  - has_many: ExternalAuthLink
+    via: datasource_name
+- name: Connection
+  key: connection_id
+  description: An authenticated link to a data source.
+  relationships:
+  - belongs_to: DataSource
+    via: datasource_name
+  - has_many: Account
+    via: connection_id
+- name: Account
+  key: account_id
+  description: A remote account within a connection; carries account_entity_id and account_embedded_id.
+  relationships:
+  - belongs_to: Connection
+    via: connection_id
+- name: ExtractTemplate
+  key: template_id
+  description: Template describing fields/settings for extracting from a data source.
+  relationships:
+  - belongs_to: DataSource
+    via: datasource_name
+- name: Extract
+  key: id
+  description: A configured extraction job (wide or standard) referencing accounts and a template.
+  relationships:
+  - belongs_to: ExtractTemplate
+    via: template_id
+  - belongs_to: Account
+    via: account_embedded_id
+- name: Destination
+  key: destination_name
+  description: A target warehouse/tool for delivering data.
+  relationships:
+  - has_many: DestinationConnection
+    via: destination_name
+- name: DestinationConnection
+  key: id
+  description: An authenticated connection to a destination.
+  relationships:
+  - belongs_to: Destination
+    via: destination_name
+- name: DataTable
+  key: data_table_id
+  description: A materialized table with a schema of provider fields plus system fields.
+  relationships:
+  - has_many: Load
+- name: Load
+  key: load_id
+  description: A job delivering a data table to a destination.
+  relationships:
+  - belongs_to: DataTable
+  - belongs_to: DestinationConnection
+- name: AutomatedRecipe
+  key: recipe_id
+  description: A pre-built workflow template instance.
+  relationships:
+  - belongs_to: Workspace
+- name: Role
+  key: role_id
+  description: A custom workspace role with a permissions set and assigned users.
+  relationships:
+  - belongs_to: Workspace
+  - has_many: User
+- name: WebhookEndpoint
+  key: id
+  description: A registered HTTPS receiver subscribed to event types, with a signing secret.
+  relationships:
+  - belongs_to: Workspace
+- name: ExternalAuthLink
+  key: id
+  description: A single-use link letting an external user authenticate a data-source connection.
+  relationships:
+  - belongs_to: DataSource
+    via: datasource_name
+system_fields:
+- account_id
+- account_name
+- __insert_date
