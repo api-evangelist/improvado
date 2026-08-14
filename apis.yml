@@ -30,11 +30,11 @@ x-type: company
 x-source: vc-portfolio
 x-backed-by:
 - bullpen-capital
-x-tier: stub
-x-tier-reason: portfolio-lead
+x-tier: enriched
+x-tier-reason: three published API surfaces (REST, MCP, public agent endpoint) with OpenAPI, OAuth discovery and provider-published agent skills
 specificationVersion: '0.20'
 created: '2026-07-17'
-modified: '2026-07-19'
+modified: '2026-08-13'
 tags:
 - Company
 - Marketing
@@ -46,6 +46,8 @@ tags:
 - Business Intelligence
 - Data Integration
 - AI Agents
+- MCP
+- Agent Readiness
 apis:
 - name: Improvado Embedded API v3
   description: >-
@@ -87,6 +89,72 @@ apis:
     url: mcp/improvado-mcp.yml
   - type: AgentSkill
     url: skills/_index.yml
+  - type: RateLimits
+    url: rate-limits/improvado-rate-limits.yml
+  - type: Components
+    url: components/improvado-components.yml
+- name: Improvado Customer MCP
+  description: >-
+    Hosted, remote Model Context Protocol server exposing Improvado's marketing data platform to any
+    MCP client (Claude, ChatGPT/Codex, Gemini CLI, Antigravity, Cursor) as 83 published tools across
+    twelve categories: warehouse SQL, live Discovery API passthrough to 1,000+ upstream ad and
+    analytics platforms, ETL extract/load/run management, custom Temporal pipelines, Marketing Data
+    Governance rules, AI recipes and notebooks, dashboards, documents and workspace control.
+    JSON-RPC 2.0 over HTTP, gated by OAuth 2.0 (authorization code + PKCE, scope mcp:customer) against
+    the customer's existing Improvado account, with workspace-scoped 15-minute sessions. The endpoint
+    host is the customer's own tenant domain. Metered and sold: MCP actions per week is a priced quota
+    on every plan tier including the free one.
+  humanURL: https://improvado.io/docs-section-topic/improvado-mcp
+  baseURL: https://report.improvado.io
+  tags:
+  - MCP
+  - AI Agents
+  - Marketing Data
+  properties:
+  - type: MCPServer
+    url: mcp/improvado-mcp.yml
+  - type: ToolCrosswalk
+    url: mcp/improvado-tool-crosswalk.yml
+  - type: Documentation
+    url: https://improvado.io/docs-section-topic/improvado-mcp
+  - type: Authentication
+    url: authentication/improvado-authentication.yml
+  - type: OAuthScopes
+    url: scopes/improvado-scopes.yml
+  - type: AgentSkill
+    url: skills/_index.yml
+  - type: Plans
+    url: plans/improvado-plans-pricing.yml
+  - type: SourceCode
+    url: https://github.com/tekliner/improvado-agentic-frameworks-and-skills
+- name: Improvado Public Agent Ask API
+  description: >-
+    Free, unauthenticated plain-text question endpoint for AI agents. POST a question and receive a
+    cited plain-text answer about marketing data architecture, connectors, pipelines, attribution and
+    MCP design, carrying a request id and an optional continuation URL. Improvado publishes an
+    OpenAPI 3.1.0 description of it, advertises it from its llms.txt and describes the flow in an
+    agents.json discovery manifest. Public product and architecture questions only — no credentials or
+    customer data may be sent, and abusive bulk traffic may be throttled.
+  humanURL: https://improvado.io/llms.txt
+  baseURL: https://agent.improvado.io
+  tags:
+  - AI Agents
+  - Marketing Intelligence
+  properties:
+  - type: OpenAPI
+    url: openapi/improvado-agent-ask-openapi.json
+  - type: Overlay
+    url: overlays/improvado-agent-ask-overlay.yaml
+  - type: Documentation
+    url: https://improvado.io/llms.txt
+  - type: LLMsTxt
+    url: llms/improvado-site-llms.txt
+  - type: Authentication
+    url: authentication/improvado-authentication.yml
+  - type: RateLimits
+    url: rate-limits/improvado-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/improvado-error-codes.yml
 maintainers:
 - FN: Kin Lane
   email: kin@apievangelist.com
@@ -159,8 +227,30 @@ common:
   url: mcp/improvado-mcp.yml
 - type: AgentSkill
   url: skills/_index.yml
+- type: OpenAPI
+  url: openapi/improvado-agent-ask-openapi.json
+- type: Overlay
+  url: overlays/improvado-agent-ask-overlay.yaml
+- type: ToolCrosswalk
+  url: mcp/improvado-tool-crosswalk.yml
+- type: OAuthScopes
+  url: scopes/improvado-scopes.yml
+- type: Packages
+  url: packages/improvado-packages.yml
+- type: SDKs
+  url: packages/improvado-packages.yml
+- type: Plans
+  url: plans/improvado-plans-pricing.yml
+- type: RateLimits
+  url: rate-limits/improvado-rate-limits.yml
+- type: Components
+  url: components/improvado-components.yml
+- type: LLMsTxt
+  url: llms/improvado-site-llms.txt
+- type: SourceCode
+  url: https://github.com/tekliner/improvado-agentic-frameworks-and-skills
 x-enrichment:
-  date: '2026-07-19'
-  status: backfilled
+  date: '2026-08-13'
+  status: enriched
+  artifacts_added: 12
   pass: local-v1
-  note: backfilled from .gitignore signal + verified work evidence
