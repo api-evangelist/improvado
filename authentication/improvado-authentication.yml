@@ -1,17 +1,42 @@
-generated: '2026-07-19'
+generated: '2026-08-13'
 method: searched
 source: https://developers.improvado.io/auth
 docs: https://developers.improvado.io/auth
+update_note: >-
+  UPDATED 2026-08-13. The 2026-07-19 profile covered only the Embedded API v3 and recorded
+  oauth2_flows: []. That is still correct for embedded.improvado.io, but Improvado runs THREE distinct
+  API surfaces with three different auth models, and the other two were missing. Added below: a full
+  OAuth 2.0 authorization-code + PKCE model on the tenant host (report.improvado.io) that gates the
+  customer MCP server — probed directly from its RFC 8414 and RFC 9728 metadata documents — and the
+  anonymous public Agent Ask endpoint.
 summary:
-  types: [http]
+  types: [http, oauth2, none]
   http_schemes: [basic, bearer]
   api_key_in: [header]
-  oauth2_flows: []
+  oauth2_flows: [authorizationCode]
+  surfaces: 3
   notes: >-
-    Two-stage model. HTTP Basic (RFC 7617) is used for workspace-management
-    operations and to obtain a workspace-scoped access token; the resulting Bearer
-    token is used for all workspace-scoped resources. A cookie/session variant
-    (dts_session_id) with an X-IM-WORKSPACE-ID header scopes embedded-UI sessions.
+    Three surfaces. (1) Embedded API v3 (embedded.improvado.io) — two-stage: HTTP Basic (RFC 7617) for
+    workspace-management operations and to obtain a workspace-scoped access token; the resulting Bearer
+    token for all workspace-scoped resources; plus a cookie/session variant (dts_session_id) with an
+    X-IM-WORKSPACE-ID header for embedded-UI sessions. (2) Customer MCP (report.improvado.io or a
+    whitelabel tenant domain) — OAuth 2.0 authorization code with PKCE, scope mcp:customer, dynamic
+    client registration, 15-minute workspace-scoped sessions. (3) Public Agent Ask API
+    (agent.improvado.io) — no authentication at all.
+surfaces:
+- surface: Improvado Embedded API v3
+  host: https://embedded.improvado.io
+  schemes: [basicAuth, bearerToken, cookieSession]
+  docs: https://developers.improvado.io/auth
+- surface: Improvado Customer MCP
+  host: https://report.improvado.io (or a whitelabel tenant domain)
+  schemes: [improvadoOAuth]
+  docs: https://improvado.io/docs-section-topic/improvado-mcp
+  cross_link: scopes/improvado-scopes.yml
+- surface: Improvado Public Agent Ask API
+  host: https://agent.improvado.io
+  schemes: [none]
+  docs: https://improvado.io/llms.txt
 schemes:
 - name: basicAuth
   type: http
@@ -41,3 +66,59 @@ schemes:
     Cookie-based session used by embedded-UI (iframe) flows, combined with an
     X-IM-WORKSPACE-ID request header to scope the session to a workspace.
   used_for: [embedded iframe UI]
+- name: improvadoOAuth
+  type: oauth2
+  surface: Improvado Customer MCP
+  method: probed
+  source: https://report.improvado.io/.well-known/oauth-authorization-server
+  description: >-
+    OAuth 2.0 authorization server on the customer's own Improvado tenant domain, gating the
+    84-tool customer MCP endpoint. Authorization code grant with PKCE (plain and S256), refresh
+    tokens, dynamic client registration (RFC 7591) and client_id metadata documents. Bearer token in
+    the Authorization header. Improvado's positioning is "your existing Improvado credentials, no new
+    tokens to manage" — the agent authorizes as the human, it does not get its own API key.
+  flows:
+  - flow: authorizationCode
+    authorizationUrl: https://report.improvado.io/api/dts/v2/oauth/o/authorize/
+    tokenUrl: https://report.improvado.io/api/dts/v2/oauth/o/token/
+    revocationUrl: https://report.improvado.io/api/dts/v2/oauth/o/revoke_token/
+    introspectionUrl: https://report.improvado.io/api/dts/v2/oauth/o/introspect/
+    registrationUrl: https://report.improvado.io/api/dts/v2/oauth/o/register/
+    pkce: [plain, S256]
+    scopes: [mcp:customer]
+  token_endpoint_auth_methods: [client_secret_basic, client_secret_post, none]
+  session_ttl: 15 minutes (Redis-backed, workspace-scoped)
+  discovery:
+    authorization_server_metadata: https://report.improvado.io/.well-known/oauth-authorization-server
+    protected_resource_metadata: https://report.improvado.io/.well-known/oauth-protected-resource/experimental/agent/api/mcp-customer/v1/invoke/
+    rfcs: [RFC 8414, RFC 9728, RFC 7591, RFC 7636]
+  used_for: [MCP tool calls]
+  cross_link: scopes/improvado-scopes.yml
+  host_note: >-
+    The issuer is the tenant's own domain. On a whitelabel domain (e.g. acme.improvado.io),
+    report.improvado.io will NOT authenticate the client — Improvado states this explicitly.
+- name: none
+  type: none
+  surface: Improvado Public Agent Ask API
+  method: searched
+  source: https://improvado.io/openapi.json
+  description: >-
+    POST https://agent.improvado.io/ask requires no authentication. The published OpenAPI declares no
+    securitySchemes and its info.description states "This endpoint is open and does not require
+    authentication." Improvado's llms.txt adds the usage boundary: one public non-sensitive question,
+    never send credentials or personal data, abusive bulk traffic may be rate limited.
+  used_for: [public product and architecture Q&A]
+x-evidence:
+- fetched: '2026-08-13'
+  url: https://report.improvado.io/.well-known/oauth-authorization-server
+  http_status: 200
+- fetched: '2026-08-13'
+  url: https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/
+  http_status: 401
+  note: 'WWW-Authenticate: Bearer resource_metadata="...", scope="mcp:customer"'
+- fetched: '2026-08-13'
+  url: https://improvado.io/openapi.json
+  http_status: 200
+- fetched: '2026-08-13'
+  url: https://developers.improvado.io/auth.md
+  http_status: 200

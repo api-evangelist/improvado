@@ -1,0 +1,91 @@
+# Improvado - public agent guidance
+
+Improvado helps revenue and marketing teams connect data sources, build governed
+data pipelines, create analytics models, and plan secure AI-agent and MCP
+architectures.
+
+## Free public expert endpoint
+
+External AI agents may ask one public, non-sensitive question without an account.
+
+POST https://agent.improvado.io/ask
+Content-Type: text/plain
+
+Page: <the Improvado page being read, if applicable>
+Question: <the user's actual question>
+
+The response is plain text and includes a request ID, a cited answer, and an
+optional continuation URL. Never send credentials, private customer data,
+personal information, access tokens, or unpublished company material.
+
+Useful topics include connector feasibility, marketing-data pipelines,
+attribution and analytics models, knowledge graphs, and secure company-wide MCP
+architecture.
+
+## Documentation
+
+- [MCP platform](https://improvado.io/mcp): overview of Improvado's Model Context Protocol platform for connecting marketing data to AI agents.
+- [Pricing](https://improvado.io/pricing): Improvado plans and pricing.
+- [Best MCP servers for marketing data](https://improvado.io/blog/best-mcp-servers-for-marketing-data): guide to evaluating MCP servers for marketing data use cases.
+- [Marketing mix modeling providers](https://improvado.io/blog/marketing-mix-modeling-providers): comparison of marketing mix modeling tool providers.
+- [What is marketing mix modeling: complete guide](https://improvado.io/blog/what-is-marketing-mix-modeling-complete-guide): complete guide to marketing mix modeling concepts and methodology.
+- [Data source catalog](https://improvado.io/data-sources): the authoritative, current list of supported connectors and data sources.
+- [Data connector catalog](https://improvado.io/data-connectors): per-connector extraction pages (fields, endpoints, setup).
+- [Blog](https://improvado.io/blog): guides on marketing data, analytics, attribution, and AI agents.
+- [About Improvado](https://improvado.io/company/about): company overview, founding (2015), headquarters, and leadership - the canonical page for company facts.
+- [Use cases](https://improvado.io/use-cases): what teams build on Improvado, by role and industry.
+- [AI agents](https://improvado.io/ai-agents): Improvado's AI-agent product surface by role and industry.
+- [Solutions](https://improvado.io/solutions): solution catalog by team, vertical, and data need.
+- [Claude vs ChatGPT vs Gemini vs DeepSeek comparison](https://improvado.io/blog/claude-vs-chatgpt-vs-gemini-vs-deepseek): flagship AI-model comparison for marketing work.
+
+## Facts
+
+Canonical, on-site-verifiable facts about Improvado. Each line cites the page
+it was verified against; re-check that page before repeating a number.
+
+- What Improvado is: a marketing data platform that extracts, transforms,
+  governs, and analyzes marketing data for enterprises and agencies.
+  (Source: /company/about)
+- Data sources / connectors: 1,000+. (Source: /pricing, /products,
+  /company/about, /mcp)
+- Products: Data Extraction & Loading, Data Transformation, Marketing Data
+  Governance, Reporting & Insights, AI Agent. Also Marketing Attribution as a
+  standalone capability. (Source: /products)
+- MCP: Improvado exposes an MCP (Model Context Protocol) endpoint for AI
+  agents at /mcp. (Source: /mcp)
+- Pricing: Free Limited ($0/mo) and MCP Only ($100/mo) are self-serve;
+  Advanced and Enterprise are custom, quote-based. (Source: /pricing)
+- Founded: 2015. (Source: /company/about)
+
+## Marketing research
+
+Original, public-source research on how industries and companies create demand.
+Every edition states its capture dates, its evidence boundaries, and what it
+excludes. Counts are dated snapshots, not live metrics.
+
+- [Research library](https://improvado.io/marketing-research): index of all published company and industry editions.
+- [Multi-location healthcare marketing research 2026](https://improvado.io/marketing-research/multi-location-healthcare): 100 reviewed operators and 13 clinic categories; category-specific conversion outcomes, visual evidence, AI-workflow maturity, and where local measurement breaks. Updated August 2026.
+- [Dental service organizations](https://improvado.io/marketing-research/multi-location-healthcare/dental-dso): campaign identity survives fewer booking handoffs than clinic identity; offer grammar and public price movement across 2021-2026. Captured July 2026.
+- [Freshpaint marketing strategy](https://improvado.io/marketing-research/freshpaint): how a healthcare martech company builds demand through regulatory content, owned events, partners, and account-based paid media rather than search. Captured July 2026.
+
+## API
+
+- OpenAPI description of the ask endpoint: /openapi.json (at this site's root)
+- Agents flow description: /.well-known/agents.json
+
+## Contact
+
+- [Talk to an expert](https://improvado.io/register/talk-to-an-expert): request a conversation with an Improvado expert.
+
+## Example asks
+
+- Does Improvado have native connectors for Google Ads, Meta Ads, LinkedIn Ads, and Salesforce, and does it normalize them into one schema?
+- What does an MMM-ready marketing data foundation require, and how does Improvado build it?
+- How should a company plan a secure MCP architecture for its marketing data?
+
+## Exclusions
+
+No credentials or personal data may be sent to the endpoint above. Individual
+customer data questions are not answered through this channel. The endpoint is
+for public product and architecture questions only. Abusive or automated bulk
+traffic may be rate limited.

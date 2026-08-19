@@ -1,4 +1,4 @@
-generated: '2026-07-19'
+generated: '2026-08-13'
 method: searched
 source: https://trust.improvado.io/
 type: Conformance
@@ -6,10 +6,22 @@ compliance_page: https://trust.improvado.io
 standards:
 - id: soc2
   conforms: true
-  evidence: SOC 2 listed on trust.improvado.io trust center
+  evidence: >-
+    SOC 2 listed on trust.improvado.io trust center; the pricing comparison grid states SOC 2 Type II
+    on every tier including Free Limited, and the MCP docs repeat "SOC 2 Type II certified".
 - id: hipaa
   conforms: true
-  evidence: HIPAA listed on trust.improvado.io trust center
+  evidence: >-
+    HIPAA listed on trust.improvado.io trust center; the pricing grid scopes HIPAA to the Advanced and
+    Enterprise tiers only, not to Free Limited or MCP Only.
+- id: iso27001
+  conforms: true
+  evidence: >-
+    "SOC 2 · GDPR · HIPAA · ISO 27001" stated in the Enterprise Security section of
+    https://improvado.io/docs-section-topic/improvado-mcp
+- id: ccpa
+  conforms: true
+  evidence: CCPA named in the compliance block of https://improvado.io/pricing
 - id: gdpr
   conforms: true
   evidence: GDPR listed on trust.improvado.io trust center; DPA published under company legal
@@ -20,8 +32,64 @@ standards:
   conforms: true
   evidence: Authorization Bearer tokens for workspace-scoped resources (30-min TTL)
 - id: oauth2
+  conforms: true
+  evidence: >-
+    CORRECTED 2026-08-13. The 2026-07-19 entry said false because only embedded.improvado.io was
+    probed, where OAuth discovery does 404. The tenant host report.improvado.io runs a full OAuth 2.0
+    authorization server gating the customer MCP endpoint: authorization_code + refresh_token grants,
+    PKCE (S256), scopes [mcp:internal, mcp:customer, introspection]. Probed from
+    https://report.improvado.io/.well-known/oauth-authorization-server (HTTP 200).
+  scope: Customer MCP surface only; the Embedded API v3 remains Basic + Bearer with no OAuth.
+- id: rfc8414-oauth-authorization-server-metadata
+  conforms: true
+  evidence: >-
+    https://report.improvado.io/.well-known/oauth-authorization-server returns 200 with a complete
+    RFC 8414 metadata document (issuer, authorization/token/revocation/introspection/registration
+    endpoints, grant + response types, PKCE methods, scopes_supported).
+- id: rfc9728-oauth-protected-resource-metadata
+  conforms: true
+  evidence: >-
+    The MCP endpoint answers an unauthenticated request with 401 and
+    WWW-Authenticate: Bearer resource_metadata="...", scope="mcp:customer"; that metadata URL returns
+    200 with resource, authorization_servers, scopes_supported and bearer_methods_supported. This is
+    the RFC 9728 discovery path implemented correctly end to end.
+- id: rfc7591-dynamic-client-registration
+  conforms: true
+  evidence: registration_endpoint published and client_id_metadata_document_supported true
+- id: rfc7636-pkce
+  conforms: true
+  evidence: code_challenge_methods_supported [plain, S256]
+- id: rfc7662-token-introspection
+  conforms: true
+  evidence: introspection_endpoint published, plus an `introspection` scope
+- id: mcp
+  conforms: true
+  evidence: >-
+    Hosted remote MCP server over HTTP JSON-RPC 2.0 at
+    https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/, 84 published tools,
+    OAuth-gated. Probed live (HTTP 401 + RFC 9728 challenge). See mcp/improvado-mcp.yml.
+- id: agents-json
+  conforms: true
+  evidence: >-
+    https://improvado.io/.well-known/agents.json returns 200 with an agents.json 0.1.0 document
+    (name, url, description, flows[], facts, docs), advertised from Improvado's own llms.txt.
+- id: llms-txt
+  conforms: true
+  evidence: >-
+    Two llms.txt documents, both 200 — https://improvado.io/llms.txt (agent guidance, facts with
+    per-page citations, exclusions) and https://developers.improvado.io/llms.txt (API reference index).
+- id: a2a-agent-card
   conforms: false
-  evidence: no OAuth2 securityScheme or OIDC/OAuth discovery documents (well-known 404)
+  evidence: >-
+    /.well-known/agent-card.json and /.well-known/agent.json return 404 on improvado.io,
+    developers.improvado.io, embedded.improvado.io, report.improvado.io and agent.improvado.io. No A2A
+    Agent Card is served.
+- id: openapi
+  conforms: partial
+  evidence: >-
+    An OpenAPI 3.1.0 document IS published — https://improvado.io/openapi.json — but it describes only
+    the 1-operation public Agent Ask API. The Embedded API v3 (47 documented operations) and the MCP
+    tool surface (84 tools) have no machine-readable contract.
 - id: rfc9457-problem-details
   conforms: false
   evidence: 'error envelope is custom {details: string}, not application/problem+json'

@@ -1,69 +1,383 @@
-generated: '2026-07-19'
-method: derived
-status: candidate
-source: https://developers.improvado.io/api
+generated: '2026-08-13'
+method: searched
+status: published
+source: https://improvado.io/docs-section-topic/improvado-mcp
 note: >-
-  No official hosted/remote Improvado MCP server was found (mcp.improvado.io does not
-  resolve; no @modelcontextprotocol package published). Improvado does expose a public
-  natural-language expert endpoint (POST https://agent.improvado.io/ask, see llms.txt)
-  but that is a Q&A endpoint, not an MCP server. The tools below are a CANDIDATE surface
-  derived one-per-operation from the documented Embedded API v3 reference — a starting
-  point for a future MCP server, not a published one.
+  UPGRADE (2026-08-13). The 2026-07-19 round recorded "no official MCP server found" and derived a
+  CANDIDATE tool list from the Embedded API v3 reference. That was wrong. Improvado ships a real,
+  hosted, remote MCP server: a customer-facing HTTP JSON-RPC 2.0 endpoint served by ai-agent-improvado,
+  authenticated with OAuth against the customer's existing Improvado account, exposing 84 tools across
+  12 categories. It is a paid product line ("MCP Only" $100/mo, MCP action quotas on every tier). The
+  endpoint was PROBED live on 2026-08-13: POST tools/list to
+  https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/ returned HTTP 401
+  {"error":"Authentication required"} with an RFC 9728 challenge header
+  WWW-Authenticate: Bearer resource_metadata="https://report.improvado.io/.well-known/oauth-protected-resource/experimental/agent/api/mcp-customer/v1/invoke/", scope="mcp:customer"
+  — which confirms the server is live and correctly advertises its authorization server. Tool
+  input schemas require an authenticated tools/list; the names and descriptions below are captured
+  verbatim from Improvado's own published tool reference (Appendix C of the MCP docs page), not guessed.
 server:
-  name: improvado
+  name: improvado-customer
+  title: Improvado Customer MCP
   transport: http
+  protocol: JSON-RPC 2.0
+  url_template: https://<your-domain>/experimental/agent/api/mcp-customer/v1/invoke/
+  standard_domain: https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/
+  domain_note: >-
+    <your-domain> is the customer's own Improvado domain: report.improvado.io for a standard account,
+    or the organization's whitelabel domain (e.g. acme.improvado.io). Improvado's docs state
+    explicitly that on a whitelabel domain report.improvado.io will not authenticate you. The host is
+    therefore templated per tenant, not a single shared gateway.
+  tool_count: 84
+  tool_count_note: >-
+    Improvado states "84 tools" in prose throughout the MCP docs, but its own published tool reference
+    (Appendix C) enumerates 83, and the twelve stated per-category counts also sum to 83
+    (5+5+3+9+8+4+6+7+13+3+11+9). The 83 enumerated tools are listed verbatim below; the 84th is not
+    named anywhere public. Recorded as found — settling it needs an authenticated tools/list.
+  tools_enumerated: 83
+deployment:
+  mode: remote
+  endpoint: https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/
+  auth: oauth
+  verified: probed
+  probe:
+    date: '2026-08-13'
+    method: POST tools/list
+    http_status: 401
+    body: '{"error":"Authentication required"}'
+    www_authenticate: >-
+      Bearer resource_metadata="https://report.improvado.io/.well-known/oauth-protected-resource/experimental/agent/api/mcp-customer/v1/invoke/",
+      scope="mcp:customer"
+    conclusion: >-
+      Live remote MCP server, OAuth-gated (RFC 9728 protected-resource metadata + RFC 8414
+      authorization-server metadata both return 200 anonymously). Not a stdio package.
+authorization:
+  model: oauth2-authorization-code
+  scope: mcp:customer
+  issuer: https://report.improvado.io
+  authorization_server_metadata: well-known/improvado-oauth-authorization-server.json
+  protected_resource_metadata: well-known/improvado-oauth-protected-resource.json
+  cross_link: scopes/improvado-scopes.yml
+  credential_note: >-
+    "Customer MCP uses OAuth — your existing Improvado credentials, no new tokens to manage."
+    Improvado documents workspace-scoped OAuth sessions with a 15-minute Redis-backed TTL, and states
+    that platform credentials (Google Ads, Meta, etc.) are held AES-256 encrypted server-side and
+    never enter the agent context.
+clients_documented:
+- client: Claude Desktop
+  method: Customize -> Connectors -> Add custom connector, paste endpoint URL, authorize via OAuth
+- client: Claude Code
+  method: 'claude mcp add --transport http improvado https://<your-domain>/experimental/agent/api/mcp-customer/v1/invoke/'
+- client: Claude Code (.mcp.json)
+  method: '{"improvado": {"type": "http", "url": "https://<your-domain>/experimental/agent/api/mcp-customer/v1/invoke/"}}'
+- client: ChatGPT
+  method: ChatGPT App Store -> "Improvado AI Agent" -> Connect (OAuth). Same authorization also exposes
+    Improvado MCP inside OpenAI Codex and Codex CLI.
+- client: OpenAI Codex (plugin)
+  method: >-
+    Codex -> Plugins -> add plugin, Source tekliner/improvado-agentic-frameworks-and-skills, Git ref
+    master. Ships 20+ pre-built marketing skills alongside MCP access.
+- client: Gemini CLI
+  method: >-
+    ~/.gemini/settings.json mcpServers entry with type http + oauth scopes ["mcp:customer"], or
+    gemini mcp add --transport http improvado <url>; authorize with /mcp auth improvado.
+  note: The Gemini web app cannot connect — Improvado MCP requires a local OAuth + HTTP MCP client.
+- client: Antigravity
+  method: Settings -> MCP servers -> Manage MCP servers, same JSON block as Gemini CLI, then OAuth.
+- client: Improvado AI Agent
+  method: Native first-party MCP client inside the Improvado product — same 84 tools, no setup.
+plans:
+  note: >-
+    MCP access is metered and sold. Free Limited $0/mo includes 50 MCP actions/week; MCP Only $100/mo
+    includes 300/week; Advanced 4,000/week; Enterprise 12,000/week.
+  cross_link: plans/improvado-plans-pricing.yml
+tool_categories:
+- category: Data Query & Visualization
+  count: 5
+- category: Discovery API — Live Platform Access
+  count: 5
+- category: Connections & Accounts
+  count: 3
+- category: ETL — Extract Management
+  count: 9
+- category: ETL — Load Management
+  count: 8
+- category: ETL — Run Management
+  count: 4
+- category: Custom Pipelines
+  count: 6
+- category: Marketing Data Governance
+  count: 7
+- category: AI Recipes / Notebooks
+  count: 13
+- category: Dashboards
+  count: 3
+- category: Documents · Chat · Knowledge · Data Tables
+  count: 11
+- category: Workspace · MCP Protocol · Connection Setup
+  count: 9
 tools:
-- name: create_token
-  description: Mint a workspace-scoped Bearer token.
-  source_operation: POST /api/v3/token
-- name: list_workspaces
-  description: List workspaces.
-  source_operation: GET /api/v3/workspaces
-- name: create_workspace
-  description: Create a workspace.
-  source_operation: POST /api/v3/workspaces
-- name: list_datasources
-  description: List available data sources.
-  source_operation: GET /api/v3/datasources
-- name: list_datasource_connections
-  description: List connections for a data source.
-  source_operation: GET /api/v3/datasources/{datasource_name}/connections
-- name: generate_external_auth_links
-  description: Generate one-time external authentication links for a data source.
-  source_operation: POST /api/v3/datasources/{datasource_name}/external-auth-links
-- name: list_extracts
-  description: List extracts.
-  source_operation: GET /api/v3/extracts
-- name: create_extract
-  description: Create an extract.
-  source_operation: POST /api/v3.1/extracts/
-- name: run_extract
-  description: Run an extract.
-  source_operation: POST /api/v3/extracts/{id}/run
-- name: list_destinations
-  description: List destinations.
-  source_operation: GET /api/v3/destinations
-- name: list_data_tables
-  description: List data tables.
-  source_operation: GET /api/v3/data-tables
-- name: update_data_table
-  description: Update a data table's selected fields.
-  source_operation: PUT /api/v3/data-tables/{data_table_id}
-- name: list_loads
-  description: List loads.
-  source_operation: GET /api/v3/loads
-- name: create_load
-  description: Create a load.
-  source_operation: POST /api/v3/loads
-- name: run_load
-  description: Run a load.
-  source_operation: PUT /api/v3/loads/{id}/run
-- name: list_webhook_endpoints
-  description: List webhook endpoints.
-  source_operation: GET /api/v3/webhook_endpoints/
-- name: create_webhook_endpoint
-  description: Create a webhook endpoint.
-  source_operation: POST /api/v3/webhook_endpoints/
-- name: list_webhook_event_types
-  description: List available webhook event types.
-  source_operation: GET /api/v3/webhook_event_types/
+- name: clickhouseTool
+  category: Data Query & Visualization
+  description: Execute SQL against ClickHouse warehouse — customer workspace scope
+- name: queryDestinationTool
+  category: Data Query & Visualization
+  description: Query downstream destinations directly (BigQuery, Snowflake, Redshift)
+- name: visualizationTool
+  category: Data Query & Visualization
+  description: Generate charts — line, bar, area, pie, scatter, table
+- name: heatmapVisualizationTool
+  category: Data Query & Visualization
+  description: Create heatmaps for time-based metric analysis
+- name: sendEmailTool
+  category: Data Query & Visualization
+  description: Send reports and visualizations via email
+- name: discoveryListDataSourcesTool
+  category: Discovery API — Live Platform Access
+  description: List all data sources available in the workspace
+- name: discoveryListConnectorsTool
+  category: Discovery API — Live Platform Access
+  description: List connectors/integrations by data source name
+- name: discoveryListAccountsTool
+  category: Discovery API — Live Platform Access
+  description: List ad accounts within a specific connector
+- name: discoveryRequestTool
+  category: Discovery API — Live Platform Access
+  description: Execute live query against any of 1,000+ platforms (Google Ads GAQL, Meta, etc.)
+- name: discoveryWebSearchTool
+  category: Discovery API — Live Platform Access
+  description: Search documentation and support resources for a data source
+- name: getConnectionsTool
+  category: Connections & Accounts
+  description: Get all connections for a datasource in current workspace
+- name: getConnectionAccountsTool
+  category: Connections & Accounts
+  description: Get ad accounts associated with a specific connection
+- name: getDestinationConnectionsTool
+  category: Connections & Accounts
+  description: List destination connections (where data lands)
+- name: createExtractTool
+  category: ETL — Extract Management
+  description: Create a new scheduled data extraction from a source
+- name: updateExtractTool
+  category: ETL — Extract Management
+  description: Update extract schedule, accounts, or field selection
+- name: getExtractByIdTool
+  category: ETL — Extract Management
+  description: Get details of a specific extract by ID
+- name: getExtractTemplatesTool
+  category: ETL — Extract Management
+  description: List available extract templates
+- name: getExtractTemplateByIdTool
+  category: ETL — Extract Management
+  description: Get a specific extract template by ID
+- name: listAllExtractsTool
+  category: ETL — Extract Management
+  description: List all extracts in the workspace with status
+- name: pauseExtractTool
+  category: ETL — Extract Management
+  description: Pause a running extract (stops scheduled pulls)
+- name: unpauseExtractTool
+  category: ETL — Extract Management
+  description: Resume a paused extract
+- name: discoverFileFieldsTool
+  category: ETL — Extract Management
+  description: Discover available fields for a file-based data source
+- name: createLoadTool
+  category: ETL — Load Management
+  description: Create a new load to push data to a destination
+- name: updateLoadTool
+  category: ETL — Load Management
+  description: Update load destination or schedule settings
+- name: getLoadTool
+  category: ETL — Load Management
+  description: Get details of a specific load by ID
+- name: getLoadsTool
+  category: ETL — Load Management
+  description: List loads with filtering options
+- name: listLoadsTool
+  category: ETL — Load Management
+  description: List all loads in the workspace
+- name: deleteLoadTool
+  category: ETL — Load Management
+  description: Delete a load permanently
+- name: pauseLoadTool
+  category: ETL — Load Management
+  description: Pause a running load
+- name: unpauseLoadTool
+  category: ETL — Load Management
+  description: Resume a paused load
+- name: runLoadTool
+  category: ETL — Run Management
+  description: Manually trigger a load run immediately
+- name: getPipelineRunsTool
+  category: ETL — Run Management
+  description: Get run history for a pipeline
+- name: getPipelineRunResultTool
+  category: ETL — Run Management
+  description: Get detailed results of a specific pipeline run
+- name: generateFlatDataSampleTool
+  category: ETL — Run Management
+  description: Generate a data sample from a flat file source
+- name: createCustomPipelineTool
+  category: Custom Pipelines
+  description: Create a custom SQL/Python transformation pipeline
+- name: updateCustomPipelineTool
+  category: Custom Pipelines
+  description: Update custom pipeline logic or schedule
+- name: deleteCustomPipelineTool
+  category: Custom Pipelines
+  description: Delete a custom pipeline
+- name: listCustomPipelinesTool
+  category: Custom Pipelines
+  description: List all custom pipelines in workspace
+- name: executeCustomPipelineTool
+  category: Custom Pipelines
+  description: Execute a custom pipeline immediately
+- name: runCustomPipelineCodeTool
+  category: Custom Pipelines
+  description: Run pipeline code with custom parameters
+- name: createMdgViewTool
+  category: Marketing Data Governance
+  description: Create a governance rule/view (naming, budget, classification)
+- name: getMdgRuleLibraryExampleTool
+  category: Marketing Data Governance
+  description: Get examples from the 250+ pre-built MDG rule library
+- name: testMdgNotificationTool
+  category: Marketing Data Governance
+  description: Test MDG alert and notification configuration
+- name: previewEmailImportAddressTool
+  category: Marketing Data Governance
+  description: Preview email import address for data ingestion
+- name: uploadFlatDataFileTool
+  category: Marketing Data Governance
+  description: Upload CSV or Excel file for processing
+- name: uploadNewFileToExtractTool
+  category: Marketing Data Governance
+  description: Upload a new file version to an existing extract
+- name: createFlatDataExtractTool
+  category: Marketing Data Governance
+  description: Create an extract pipeline from flat file data
+- name: createRecipeTool
+  category: AI Recipes / Notebooks
+  description: Create a new composable AI analysis notebook
+- name: updateRecipeTool
+  category: AI Recipes / Notebooks
+  description: Update recipe settings, cells, or parameters
+- name: getRecipeTool
+  category: AI Recipes / Notebooks
+  description: Retrieve a recipe by ID
+- name: getRecipeTemplatesTool
+  category: AI Recipes / Notebooks
+  description: List available recipe templates (attribution, reporting, etc.)
+- name: createRecipeStepTool
+  category: AI Recipes / Notebooks
+  description: Add a SQL or Python step to an existing recipe
+- name: getRecipeStepTool
+  category: AI Recipes / Notebooks
+  description: Get a specific step within a recipe
+- name: listRecipesTool
+  category: AI Recipes / Notebooks
+  description: List all recipes in the current workspace
+- name: activateRecipeTool
+  category: AI Recipes / Notebooks
+  description: Activate and run a recipe
+- name: nameRecipeTool
+  category: AI Recipes / Notebooks
+  description: Set or update the display name of a recipe
+- name: createLesIntegrationChatTool
+  category: AI Recipes / Notebooks
+  description: Create a LES integration chat session for guided setup
+- name: scheduleChatTool
+  category: AI Recipes / Notebooks
+  description: Schedule a recurring AI chat/analysis session
+- name: getScheduledChatTool
+  category: AI Recipes / Notebooks
+  description: Get details of a scheduled chat session
+- name: deleteScheduledChatTool
+  category: AI Recipes / Notebooks
+  description: Remove a scheduled chat session
+- name: getDashboardTool
+  category: Dashboards
+  description: Retrieve a dashboard by ID
+- name: listDashboardsTool
+  category: Dashboards
+  description: List all dashboards in the workspace
+- name: getCustomDashboardsAndDecksPromptTool
+  category: Dashboards
+  description: Get context prompt for custom dashboards and decks
+- name: createDocument
+  category: Documents · Chat · Knowledge · Data Tables
+  description: Create a new document in the workspace
+- name: editDocument
+  category: Documents · Chat · Knowledge · Data Tables
+  description: Edit content of an existing document
+- name: getDocument
+  category: Documents · Chat · Knowledge · Data Tables
+  description: Retrieve a document by ID
+- name: deleteDocument
+  category: Documents · Chat · Knowledge · Data Tables
+  description: Delete a document permanently
+- name: listDocuments
+  category: Documents · Chat · Knowledge · Data Tables
+  description: List all documents in the workspace
+- name: findChat
+  category: Documents · Chat · Knowledge · Data Tables
+  description: Search past AI conversations by query
+- name: getChat
+  category: Documents · Chat · Knowledge · Data Tables
+  description: Get full conversation context and history by ID
+- name: getManagedConnectionCredentialsTool
+  category: Documents · Chat · Knowledge · Data Tables
+  description: Get connection credential metadata (IDs/status — never raw secrets)
+- name: documentationTool
+  category: Documents · Chat · Knowledge · Data Tables
+  description: Query Improvado product documentation
+- name: retrieveDocumentationTool
+  category: Documents · Chat · Knowledge · Data Tables
+  description: Retrieve specific documentation files by path
+- name: listDataTablesTool
+  category: Documents · Chat · Knowledge · Data Tables
+  description: List all data tables available in current workspace
+- name: getCurrentWorkspaceTool
+  category: Workspace · MCP Protocol · Connection Setup
+  description: Get current workspace context — agency, workspace ID, name
+- name: switchWorkspaceTool
+  category: Workspace · MCP Protocol · Connection Setup
+  description: Switch to a different workspace within allowed agencies
+- name: getWorkspacesTool
+  category: Workspace · MCP Protocol · Connection Setup
+  description: List all workspaces available to the authenticated user
+- name: mcpListToolsTool
+  category: Workspace · MCP Protocol · Connection Setup
+  description: Dynamically list all available MCP tools at runtime
+- name: mcpCallToolTool
+  category: Workspace · MCP Protocol · Connection Setup
+  description: Call any MCP tool by name (meta-wrapper for agents)
+- name: mcpListResourcesTool
+  category: Workspace · MCP Protocol · Connection Setup
+  description: List MCP resources available in current context
+- name: mcpReadResourceTool
+  category: Workspace · MCP Protocol · Connection Setup
+  description: Read a specific MCP resource by URI
+- name: createConnectionTool
+  category: Workspace · MCP Protocol · Connection Setup
+  description: Create a new data source connection in the workspace
+- name: customConnectorFormTool
+  category: Workspace · MCP Protocol · Connection Setup
+  description: Access custom connector configuration form
+x-evidence:
+- fetched: '2026-08-13'
+  url: https://improvado.io/docs-section-topic/improvado-mcp
+  http_status: 200
+  note: Published tool reference (Appendix C), connection instructions, OAuth model.
+- fetched: '2026-08-13'
+  url: https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/
+  http_status: 401
+  note: POST tools/list -> Authentication required + RFC 9728 WWW-Authenticate challenge. Server is live.
+- fetched: '2026-08-13'
+  url: https://raw.githubusercontent.com/tekliner/improvado-agentic-frameworks-and-skills/master/.mcp.json
+  http_status: 200
+  note: >-
+    Improvado's own Codex plugin repo ships the concrete endpoint
+    https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke under the server name
+    improvado-customer, titled "Improvado Customer MCP", "served by ai-agent-improvado".

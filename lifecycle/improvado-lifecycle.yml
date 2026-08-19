@@ -1,4 +1,4 @@
-generated: '2026-07-19'
+generated: '2026-08-13'
 method: searched
 source: https://developers.improvado.io/api
 type: Lifecycle
@@ -24,3 +24,31 @@ deprecation:
     2026-06-15 extraction-template validation request-format change). Not asserting a
     Deprecation pointer (no policy page to cite).
 deprecated_operations: []
+
+surfaces:
+- surface: Improvado Embedded API v3
+  host: https://embedded.improvado.io
+  versioning: uri-path (/api/v3/, with /api/v3.1/ for select newer request shapes)
+  stability: general-availability
+- surface: Improvado Customer MCP
+  host: https://report.improvado.io (or a whitelabel tenant domain)
+  versioning: uri-path (/experimental/agent/api/mcp-customer/v1/invoke/)
+  stability: experimental
+  stability_evidence: >-
+    The path segment the provider itself publishes begins with /experimental/. Improvado documents the
+    endpoint as production-ready and sells it as a priced product line (MCP Only, $100/mo), yet the URL
+    an integrator must hard-code declares it experimental. Recorded as-is: this is the provider's own
+    signal, and a consumer pinning that path is pinning an experimental route.
+  version: v1
+  added: '2026-08-13'
+  cross_link: mcp/improvado-mcp.yml
+- surface: Improvado Public Agent Ask API
+  host: https://agent.improvado.io
+  versioning: none (unversioned path /ask; the OpenAPI declares info.version 1.0.0)
+  stability: public-preview
+  added: '2026-08-13'
+  cross_link: openapi/improvado-agent-ask-openapi.json
+support_and_sla:
+  service_agreement: https://improvado.io/company-legal/support-services-2023-06-28
+  premium_support_tiers: [Advanced, Enterprise]
+  premium_support_source: https://improvado.io/pricing

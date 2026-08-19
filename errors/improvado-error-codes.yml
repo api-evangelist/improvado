@@ -1,4 +1,4 @@
-generated: '2026-07-19'
+generated: '2026-08-13'
 method: searched
 source: https://developers.improvado.io/introduction
 type: ErrorCatalog
@@ -31,3 +31,66 @@ errors:
     Feature not enabled for the workspace — e.g. external authentication links require the
     agency feature flag; the endpoint returns 403 otherwise.
   source: changelog (2026-07-14 external authentication links)
+
+surfaces:
+- surface: Improvado Embedded API v3
+  host: https://embedded.improvado.io
+  envelope: '{"details": "error description"}'
+  content_type: application/json
+  rfc9457: false
+- surface: Improvado Public Agent Ask API
+  host: https://agent.improvado.io
+  envelope: >-
+    plain text on 200; on an unknown path the host returns
+    {"error": "not found", "try": "GET / or POST /ask"} (observed)
+  content_type: [text/plain, application/json]
+  rfc9457: false
+  added: '2026-08-13'
+  source: https://improvado.io/openapi.json
+  errors:
+  - status: 400
+    title: Malformed request
+    meaning: The published OpenAPI declares a 400 for a malformed request body.
+    source: https://improvado.io/openapi.json
+  - status: 429
+    title: Rate limited
+    meaning: >-
+      "Rate limited. Abusive or automated bulk traffic may be throttled; retry later." No Retry-After
+      header or numeric limit is published.
+    source: https://improvado.io/openapi.json
+    cross_link: rate-limits/improvado-rate-limits.yml
+  - status: 404
+    title: Not found
+    meaning: >-
+      Observed on probe: unknown paths on agent.improvado.io return
+      {"error": "not found", "try": "GET / or POST /ask"}. Not declared in the spec; recorded as an
+      observed runtime behaviour, not a documented contract.
+    method: probed
+- surface: Improvado Customer MCP
+  host: https://report.improvado.io
+  envelope: JSON-RPC 2.0 error objects (schema not publicly documented)
+  content_type: application/json
+  rfc9457: false
+  added: '2026-08-13'
+  errors:
+  - status: 401
+    title: Authentication required
+    meaning: >-
+      Observed on probe: an unauthenticated tools/list returns HTTP 401 with body
+      {"error":"Authentication required"} and an RFC 9728 WWW-Authenticate challenge naming the
+      protected-resource metadata URL and scope mcp:customer. This is the correct MCP/OAuth behaviour.
+    method: probed
+    source: https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/
+  note: >-
+    Improvado publishes no error-code reference for the MCP tool surface. Tool-level error shapes
+    would require an authenticated session to enumerate; not guessed.
+x-evidence:
+- fetched: '2026-08-13'
+  url: https://improvado.io/openapi.json
+  http_status: 200
+- fetched: '2026-08-13'
+  url: https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/
+  http_status: 401
+- fetched: '2026-08-13'
+  url: https://agent.improvado.io/openapi.json
+  http_status: 404

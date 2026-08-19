@@ -1,0 +1,66 @@
+{
+  "agentsJson": "0.1.0",
+  "name": "Improvado",
+  "url": "https://improvado.io",
+  "description": "Improvado is a marketing data platform offering a free public plain-text ask endpoint for AI agents.",
+  "flows": [
+    {
+      "id": "ask-question",
+      "description": "An agent sends one plain-text question about marketing data architecture, connectors, pipelines, attribution, or MCP design and receives a cited plain-text answer.",
+      "endpoint": {
+        "method": "POST",
+        "url": "https://agent.improvado.io/ask",
+        "contentType": "text/plain",
+        "bodyTemplate": "Page: <page url>\nQuestion: <question>"
+      },
+      "response": {
+        "contentType": "text/plain",
+        "includes": [
+          "request id",
+          "cited answer",
+          "optional continuation url"
+        ]
+      },
+      "constraints": [
+        "no authentication required",
+        "one question per request",
+        "never send credentials, personal data, or private customer data"
+      ]
+    }
+  ],
+  "facts": {
+    "description": "Canonical, on-site-verifiable facts about Improvado. Each value cites the page it was verified against.",
+    "whatItIs": {
+      "value": "A marketing data platform that extracts, transforms, governs, and analyzes marketing data for enterprises and agencies.",
+      "source": "https://improvado.io/company/about"
+    },
+    "dataSources": {
+      "value": "1,000+",
+      "source": "https://improvado.io/pricing"
+    },
+    "products": {
+      "value": [
+        "Data Extraction & Loading",
+        "Data Transformation",
+        "Marketing Data Governance",
+        "Reporting & Insights",
+        "AI Agent",
+        "Marketing Attribution"
+      ],
+      "source": "https://improvado.io/products"
+    },
+    "mcp": {
+      "value": "https://improvado.io/mcp",
+      "source": "https://improvado.io/mcp"
+    },
+    "pricingModel": {
+      "value": "Free Limited ($0/mo) and MCP Only ($100/mo) self-serve; Advanced and Enterprise custom, quote-based.",
+      "source": "https://improvado.io/pricing"
+    },
+    "founded": {
+      "value": "2015",
+      "source": "https://improvado.io/company/about"
+    }
+  },
+  "docs": "https://improvado.io/llms.txt"
+}

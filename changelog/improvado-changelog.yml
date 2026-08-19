@@ -1,4 +1,4 @@
-generated: '2026-07-19'
+generated: '2026-08-13'
 method: searched
 source: https://developers.improvado.io/changelog
 type: ChangeLog
@@ -9,6 +9,21 @@ notes: >-
   Added / Changed. Recent window captured verbatim from the published changelog; the
   live changelog is the source of truth.
 entries:
+- date: '2026-08-12'
+  changes:
+  - kind: added
+    highlight: Account selection in the connection iframe
+    detail: >-
+      Append show_account_selection=True to the URL returned by POST /api/v3/get_iframe_url to let the
+      end user choose which accounts a connection syncs, instead of creating a connection that syncs
+      all of them. The flow becomes two steps: the user authorizes first, then either syncs all
+      accounts or picks specific ones, and the connection is created from that choice. ConnectionCreated
+      is posted to the parent window only after the account step, so the connection already exists when
+      your page receives it. The integrator must add the parameter to the returned URL themselves —
+      get_iframe_url does not emit it. Data sources that cannot list accounts before the connection
+      exists keep the single-step flow and the parameter has no effect there. Existing embeds are
+      unaffected.
+    cross_link: components/improvado-components.yml
 - date: '2026-07-14'
   changes:
   - kind: added

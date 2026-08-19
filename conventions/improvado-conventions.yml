@@ -1,4 +1,4 @@
-generated: '2026-07-19'
+generated: '2026-08-13'
 method: searched
 source: https://developers.improvado.io/api
 docs:
@@ -66,3 +66,47 @@ system_fields:
   - account_id
   - account_name
   - __insert_date
+
+surfaces:
+  note: >-
+    ADDED 2026-08-13. The conventions above describe the Embedded API v3 (embedded.improvado.io).
+    Improvado runs two further surfaces whose conventions differ materially, and an agent must not
+    carry rules across them.
+  surfaces:
+  - surface: Improvado Customer MCP
+    host: https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/
+    protocol: JSON-RPC 2.0 over HTTP
+    authentication: OAuth 2.0 authorization code + PKCE, scope mcp:customer
+    session: workspace-scoped, 15-minute Redis-backed TTL
+    pagination: not publicly documented (tool input schemas are auth-gated)
+    idempotency: not publicly documented for tool calls
+    error_envelope: JSON-RPC 2.0 error objects; unauthenticated calls return HTTP 401 with an RFC 9728
+      WWW-Authenticate challenge
+    rate_limiting: metered as "MCP actions / week" per plan; no headers published
+    cross_link: mcp/improvado-mcp.yml
+  - surface: Improvado Public Agent Ask API
+    host: https://agent.improvado.io
+    protocol: >-
+      HTTP POST with a text/plain body; the service root document states a JSON body of the form
+      {"query": "..."} is also accepted.
+    authentication: none
+    pagination: not applicable (single question/answer)
+    idempotency: not applicable
+    error_envelope: 400 malformed, 429 rate limited (declared in the published OpenAPI)
+    tracing: the response carries a request_id (agw_ prefix) per the service root document
+    cross_link: openapi/improvado-agent-ask-openapi.json
+request_tracing:
+  embedded_api:
+    header: null
+    note: No request-id header is documented for the Embedded API v3.
+  mcp:
+    header: x-im-trace-id
+    method: probed
+    note: >-
+      Observed on the live MCP endpoint response (2026-08-13). Not documented by the provider;
+      recorded as an observed runtime signal, not a published contract.
+  agent_ask:
+    field: request_id
+    prefix: agw_
+    location: response body
+    source: https://agent.improvado.io/ (service root document)

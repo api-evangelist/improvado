@@ -1,0 +1,1 @@
+{"resource": "https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/", "authorization_servers": ["https://report.improvado.io"], "scopes_supported": ["mcp:customer"], "bearer_methods_supported": ["header"]}

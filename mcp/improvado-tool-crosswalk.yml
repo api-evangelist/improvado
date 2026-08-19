@@ -1,0 +1,380 @@
+generated: '2026-08-13'
+method: derived
+source: mcp/improvado-mcp.yml + llms/improvado-llms.txt (Embedded API v3 operation list)
+type: ToolCrosswalk
+note: >-
+  Improvado runs three non-identical projections of one data core, and this file records where they
+  diverge. (1) The Embedded API v3 REST surface at https://embedded.improvado.io — fully documented
+  (METHOD + path) in the developer portal and its llms.txt, but Improvado publishes NO OpenAPI for it,
+  so there are no operationIds to bind to; the `rest:` column therefore carries the documented
+  METHOD + path, which is the strongest identifier the provider actually publishes. (2) The customer
+  MCP server at report.improvado.io — 83 enumerated OAuth-gated tools (Improvado advertises 84). (3) The public Agent Ask API at
+  agent.improvado.io — the ONE surface with a real OpenAPI (openapi/improvado-agent-ask-openapi.json).
+  Live tools/list is auth-gated (HTTP 401), so tool input schemas could not be read; bindings below are
+  mapped by NAME AND SEMANTICS against the published REST reference, and confidence is set honestly.
+  Nothing here is invented — every tool name comes from Improvado's published tool reference and every
+  REST path from Improvado's published API reference.
+surfaces:
+  openapi:
+    file: openapi/improvado-agent-ask-openapi.json
+    covers: Public Agent Ask API only (1 operation, agent.improvado.io)
+    gated: false
+  rest_documented:
+    docs: https://developers.improvado.io/api
+    machine_readable: llms/improvado-llms.txt
+    covers: Improvado Embedded API v3 (embedded.improvado.io)
+    openapi_published: false
+    note: Documented operations only; no OpenAPI, so no operationIds exist to bind.
+  mcp:
+    url: https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/
+    tools: 83 enumerated (84 advertised — see coverage.tools_count_discrepancy_note)
+    gated: true
+    gate: OAuth (scope mcp:customer); POST tools/list returns HTTP 401 anonymously
+  graphql:
+    present: false
+crosswalk:
+- tool: getWorkspacesTool
+  category: Workspace
+  rest: [GET /api/v3/workspaces]
+  binding: rest
+  confidence: high
+- tool: getCurrentWorkspaceTool
+  category: Workspace
+  rest: ["GET /api/v3/workspaces/{id}"]
+  binding: rest
+  confidence: medium
+  note: MCP returns the session's current workspace context; REST requires the id explicitly.
+- tool: switchWorkspaceTool
+  category: Workspace
+  rest: []
+  binding: session
+  confidence: low
+  note: Session-state operation on the MCP connection; no REST equivalent (REST scopes per Bearer token).
+- tool: getConnectionsTool
+  category: Connections
+  rest: ["GET /api/v3/datasources/{datasource_name}/connections"]
+  binding: rest
+  confidence: high
+- tool: getConnectionAccountsTool
+  category: Connections
+  rest: ["GET /api/v3/connections/{connection_id}/accounts"]
+  binding: rest
+  confidence: high
+- tool: createConnectionTool
+  category: Connections
+  rest: [POST /api/v3/get_iframe_url, "POST /api/v3/datasources/{datasource_name}/external-auth-links"]
+  binding: rest
+  confidence: low
+  note: >-
+    REST creates connections indirectly — through the hosted auth iframe or an external-auth link —
+    rather than with a direct create-connection call. Fan-out, so confidence is low.
+- tool: getDestinationConnectionsTool
+  category: Connections
+  rest: ["GET /api/v3/destinations/{destination_name}/connections"]
+  binding: rest
+  confidence: high
+- tool: getExtractTemplatesTool
+  category: Extracts
+  rest: ["GET /api/v3/datasources/{datasource_name}/extract-templates"]
+  binding: rest
+  confidence: high
+- tool: getExtractTemplateByIdTool
+  category: Extracts
+  rest: ["GET /api/v3/datasources/{datasource_name}/extract-templates/{id}", "GET /api/v3/extract-template/{template_id}/"]
+  binding: rest
+  confidence: high
+- tool: createExtractTool
+  category: Extracts
+  rest: [POST /api/v3.1/extracts/]
+  binding: rest
+  confidence: high
+- tool: updateExtractTool
+  category: Extracts
+  rest: ["PUT /api/v3/extracts/{id}", "PATCH /api/v3/extracts/{id}"]
+  binding: rest
+  confidence: high
+- tool: getExtractByIdTool
+  category: Extracts
+  rest: ["GET /api/v3/extracts/{id}"]
+  binding: rest
+  confidence: high
+- tool: listAllExtractsTool
+  category: Extracts
+  rest: [GET /api/v3/extracts]
+  binding: rest
+  confidence: high
+- tool: pauseExtractTool
+  category: Extracts
+  rest: ["POST /api/v3/extracts/{extract_id}/pause"]
+  binding: rest
+  confidence: high
+- tool: unpauseExtractTool
+  category: Extracts
+  rest: ["POST /api/v3/extracts/{extract_id}/unpause"]
+  binding: rest
+  confidence: high
+- tool: createLoadTool
+  category: Loads
+  rest: [POST /api/v3/loads]
+  binding: rest
+  confidence: high
+- tool: updateLoadTool
+  category: Loads
+  rest: ["PUT /api/v3/loads/{load_id}"]
+  binding: rest
+  confidence: medium
+- tool: getLoadTool
+  category: Loads
+  rest: ["GET /api/v3/loads/{load_id}"]
+  binding: rest
+  confidence: high
+- tool: getLoadsTool
+  category: Loads
+  rest: [GET /api/v3/loads]
+  binding: rest
+  confidence: high
+- tool: listLoadsTool
+  category: Loads
+  rest: [GET /api/v3/loads]
+  binding: rest
+  confidence: medium
+  note: getLoadsTool and listLoadsTool both map to the same single REST list operation.
+- tool: deleteLoadTool
+  category: Loads
+  rest: ["DELETE /api/v3/loads/{load_id}"]
+  binding: rest
+  confidence: medium
+- tool: pauseLoadTool
+  category: Loads
+  rest: ["PUT /api/v3/loads/{id}/pause"]
+  binding: rest
+  confidence: high
+- tool: unpauseLoadTool
+  category: Loads
+  rest: ["PUT /api/v3/loads/{id}/unpause"]
+  binding: rest
+  confidence: high
+- tool: runLoadTool
+  category: Loads
+  rest: ["PUT /api/v3/loads/{id}/run"]
+  binding: rest
+  confidence: high
+- tool: listDataTablesTool
+  category: Data tables
+  rest: [GET /api/v3/data-tables]
+  binding: rest
+  confidence: high
+- tool: listDashboardsTool
+  category: Dashboards
+  rest: ["GET /api/v3/workspaces/{id}/dashboards"]
+  binding: rest
+  confidence: medium
+- tool: createRecipeTool
+  category: Recipes
+  rest: ["POST /api/v3/workspaces/{id}/recipes"]
+  binding: rest
+  confidence: low
+  note: >-
+    REST only ENABLES an agency recipe in a workspace; the MCP tool authors a composable AI notebook.
+    Related capability, materially different operation.
+- tool: listRecipesTool
+  category: Recipes
+  rest: [GET /api/v3/recipes]
+  binding: rest
+  confidence: low
+  note: REST lists agency recipe templates; MCP lists workspace AI notebooks.
+mcp_only:
+- tool: clickhouseTool
+  reason: Direct SQL against the customer's ClickHouse MCDM warehouse. No public REST query endpoint.
+- tool: queryDestinationTool
+  reason: Queries the customer's own BigQuery/Snowflake/Redshift. No REST equivalent.
+- tool: visualizationTool
+  reason: Chart rendering. Not part of the Embedded API v3 surface.
+- tool: heatmapVisualizationTool
+  reason: Chart rendering. Not part of the Embedded API v3 surface.
+- tool: sendEmailTool
+  reason: Report delivery. No REST equivalent.
+- tool: discoveryListDataSourcesTool
+  reason: Discovery API (live platform passthrough) is exposed only through MCP and the product UI.
+- tool: discoveryListConnectorsTool
+  reason: Discovery API — MCP only.
+- tool: discoveryListAccountsTool
+  reason: Discovery API — MCP only.
+- tool: discoveryRequestTool
+  reason: >-
+    Live query against 1,000+ upstream platform APIs (e.g. Google Ads GAQL). This is Improvado's
+    largest MCP-only capability and has no counterpart anywhere in the Embedded API v3 REST surface.
+- tool: discoveryWebSearchTool
+  reason: Documentation/support search — MCP only.
+- tool: discoverFileFieldsTool
+  reason: Flat-file field discovery — MCP only.
+- tool: generateFlatDataSampleTool
+  reason: Flat-file sampling — MCP only.
+- tool: createFlatDataExtractTool
+  reason: Flat-file extract creation — MCP only.
+- tool: uploadFlatDataFileTool
+  reason: CSV/Excel upload — MCP only.
+- tool: uploadNewFileToExtractTool
+  reason: File version upload — MCP only.
+- tool: previewEmailImportAddressTool
+  reason: Email-import address preview — MCP only.
+- tool: createCustomPipelineTool
+  reason: Custom SQL/Python transformation pipelines are not in the Embedded API v3 REST surface.
+- tool: updateCustomPipelineTool
+  reason: Custom pipelines — MCP only.
+- tool: deleteCustomPipelineTool
+  reason: Custom pipelines — MCP only.
+- tool: listCustomPipelinesTool
+  reason: Custom pipelines — MCP only.
+- tool: executeCustomPipelineTool
+  reason: Custom pipelines — MCP only.
+- tool: runCustomPipelineCodeTool
+  reason: Custom pipelines — MCP only.
+- tool: createMdgViewTool
+  reason: Marketing Data Governance rules have no REST surface in Embedded API v3.
+- tool: getMdgRuleLibraryExampleTool
+  reason: MDG rule library — MCP only.
+- tool: testMdgNotificationTool
+  reason: MDG notification testing — MCP only.
+- tool: updateRecipeTool
+  reason: AI notebook editing — MCP only.
+- tool: getRecipeTool
+  reason: AI notebook retrieval — MCP only.
+- tool: getRecipeTemplatesTool
+  reason: AI notebook templates — MCP only.
+- tool: createRecipeStepTool
+  reason: AI notebook cell authoring — MCP only.
+- tool: getRecipeStepTool
+  reason: AI notebook cell retrieval — MCP only.
+- tool: activateRecipeTool
+  reason: AI notebook execution — MCP only.
+- tool: nameRecipeTool
+  reason: AI notebook naming — MCP only.
+- tool: createLesIntegrationChatTool
+  reason: Guided-setup chat session — MCP only.
+- tool: scheduleChatTool
+  reason: Recurring AI chat scheduling — MCP only.
+- tool: getScheduledChatTool
+  reason: Scheduled chat retrieval — MCP only.
+- tool: deleteScheduledChatTool
+  reason: Scheduled chat deletion — MCP only.
+- tool: getDashboardTool
+  reason: Dashboard retrieval by id — no REST equivalent (REST lists workspace dashboards only).
+- tool: getCustomDashboardsAndDecksPromptTool
+  reason: Agent context prompt — MCP only by construction.
+- tool: createDocument
+  reason: Workspace documents/knowledge layer has no REST surface.
+- tool: editDocument
+  reason: Documents — MCP only.
+- tool: getDocument
+  reason: Documents — MCP only.
+- tool: deleteDocument
+  reason: Documents — MCP only.
+- tool: listDocuments
+  reason: Documents — MCP only.
+- tool: findChat
+  reason: AI conversation search — MCP only.
+- tool: getChat
+  reason: AI conversation retrieval — MCP only.
+- tool: getManagedConnectionCredentialsTool
+  reason: Credential metadata (never raw secrets) — MCP only.
+- tool: documentationTool
+  reason: Product-documentation query — MCP only.
+- tool: retrieveDocumentationTool
+  reason: Documentation file retrieval — MCP only.
+- tool: getPipelineRunsTool
+  reason: Pipeline run history has no documented REST endpoint.
+- tool: getPipelineRunResultTool
+  reason: Pipeline run results — MCP only.
+- tool: mcpListToolsTool
+  reason: MCP protocol meta-operation.
+- tool: mcpCallToolTool
+  reason: MCP protocol meta-operation.
+- tool: mcpListResourcesTool
+  reason: MCP protocol meta-operation.
+- tool: mcpReadResourceTool
+  reason: MCP protocol meta-operation.
+- tool: customConnectorFormTool
+  reason: Custom connector configuration form — MCP only.
+rest_only:
+- capability: Token acquisition
+  operations: [POST /api/v3/token]
+  reason: MCP authenticates with OAuth, so the Basic-auth token mint has no tool.
+- capability: Workspace provisioning
+  operations: [POST /api/v3/workspaces, "PUT /api/v3/workspaces/{id}"]
+  reason: >-
+    Agencies create and rename workspaces over REST; MCP can only switch between workspaces the
+    authenticated user already has.
+- capability: Embedded iframe UI
+  operations: [POST /api/v3/get_iframe_url]
+  reason: Hosted connection/authorization iframe for embedding. No agent-facing tool.
+- capability: Connection deletion
+  operations: ["DELETE /api/v3/datasources/{datasource_name}/connections/{id}", "DELETE /api/v3/connections/{connection_id}"]
+  reason: No delete-connection MCP tool is published.
+- capability: Account updates
+  operations: ["PATCH /api/v3/connections/{connection_id}/accounts", "PATCH /api/v3/connections/{connection_id}/accounts/{account_id}"]
+  reason: No account-update MCP tool is published.
+- capability: External authentication links
+  operations:
+  - "POST /api/v3/datasources/{datasource_name}/external-auth-links"
+  - "GET /api/v3/datasources/{datasource_name}/external-auth-links"
+  - "POST /api/v3/datasources/{datasource_name}/external-auth-links/{id}/revoke"
+  reason: Agency credential-request flow is REST/UI only.
+- capability: Extract template authoring and validation
+  operations:
+  - "POST /api/v3/datasources/{datasource_name}/extract-templates"
+  - "POST /api/v3/extract-template/{template_id}/preview/"
+  - "POST /api/v3/extract-template/{template_id}/validation/"
+  - "POST /api/v3/datasources/{datasource_name}/custom_setting_options/"
+  reason: Template authoring/preview/validation has no published MCP tool.
+- capability: Extract run and wide-report migration
+  operations: ["POST /api/v3/extracts/{id}/run", POST /api/v3/extracts/migrate-wide]
+  reason: >-
+    MCP can create, pause and unpause extracts but no published tool runs one on demand or performs the
+    wide-report migration.
+- capability: Data table field selection
+  operations: ["PUT /api/v3/data-tables/{data_table_id}"]
+  reason: MCP lists data tables but cannot change field selection.
+- capability: Destination catalog
+  operations: [GET /api/v3/destinations]
+  reason: No MCP tool lists the available destination types.
+- capability: Webhook management
+  operations:
+  - GET /api/v3/webhook_endpoints/
+  - POST /api/v3/webhook_endpoints/
+  - "GET /api/v3/webhook_endpoints/{id}/"
+  - "PATCH /api/v3/webhook_endpoints/{id}/"
+  - "DELETE /api/v3/webhook_endpoints/{id}/"
+  - "POST /api/v3/webhook_endpoints/{id}/verify/"
+  - "POST /api/v3/webhook_endpoints/{id}/regenerate_secret/"
+  - GET /api/v3/webhook_event_types/
+  reason: >-
+    The entire event/webhook surface is REST-only. An agent on MCP can act but cannot subscribe to
+    lifecycle events — the sharpest asymmetry between the two surfaces.
+- capability: Public agent Q&A
+  operations: [POST /ask]
+  reason: >-
+    The Agent Ask API (agent.improvado.io) is a separate anonymous surface with its own OpenAPI; it is
+    not exposed as an MCP tool.
+coverage:
+  tools_advertised_by_provider: 84
+  tools_enumerated_in_reference: 83
+  tools_count_discrepancy_note: >-
+    Improvado states "84 tools" repeatedly in prose, but its own published tool reference (Appendix C)
+    enumerates 83 across twelve categories whose stated per-category counts also sum to 83
+    (5+5+3+9+8+4+6+7+13+3+11+9). Recorded as found rather than reconciled — the 84th tool is not named
+    anywhere public, and a live authenticated tools/list would be needed to settle it.
+  tools_mapped_to_rest: 27
+  tools_session_only: 1
+  mcp_only: 55
+  accounted: 83
+  distinct_rest_operations_bound: 29
+  rest_documented_operations: 47
+  rest_only_capabilities: 12
+  openapi_operations_total: 1
+  note: >-
+    Counts are of DOCUMENTED operations, not spec-parsed operationIds — Improvado publishes no OpenAPI
+    for the Embedded API v3. The two surfaces overlap on roughly half the ETL core and diverge
+    completely at the edges: Discovery API, warehouse SQL, governance, notebooks and documents exist
+    only on MCP; webhooks, workspace provisioning, template authoring and the embed iframe exist only
+    on REST.

@@ -1,0 +1,82 @@
+generated: '2026-08-13'
+method: searched
+source: https://developers.improvado.io/changelog
+type: Components
+note: >-
+  Improvado ships no JavaScript element library and no npm-distributed widget set. What it does ship —
+  and what the Embedded API v3 exists to serve — is a HOSTED, EMBEDDABLE UI surface: an iframe the
+  customer drops into their own product so their end users can authorize data-source connections
+  without ever entering Improvado. That is a client-side embeddable component in the sense this
+  artifact records, so it is captured here rather than in packages/. Everything below is read from
+  Improvado's published API reference and dated changelog; no loader script, CDN URL or version is
+  published, and none is invented.
+distribution: hosted-iframe
+loader_libraries: []
+loader_note: >-
+  There is no JS loader/SDK. The host application calls a REST operation, receives a URL, and renders
+  it in an <iframe>. Communication back to the host is by window postMessage.
+families:
+- family: Connection authorization iframe
+  kind: hosted-iframe
+  description: >-
+    Embeddable data-source connection flow. The host application calls POST /api/v3/get_iframe_url to
+    mint a URL, embeds it, and the end user authorizes the upstream platform (Google Ads, Meta, etc.)
+    inside the host product's own UI.
+  mint_operation: POST /api/v3/get_iframe_url
+  auth: Bearer token (workspace-scoped, 30 minute TTL) — see authentication/improvado-authentication.yml
+  parameters:
+  - name: show_account_selection
+    type: query string appended by the integrator
+    values: ['True']
+    added: '2026-08-12'
+    description: >-
+      Appended by the integrator to the URL returned by get_iframe_url. Turns the flow into two steps:
+      the user authorizes first, then either syncs all accounts or picks specific ones, and the
+      connection is created from that choice.
+    caveats:
+    - The integrator must append the parameter themselves — get_iframe_url does not emit it.
+    - >-
+      Data sources that cannot list accounts before the connection exists keep the single-step flow;
+      the parameter has no effect there.
+    - Existing embeds are unaffected — without the parameter the iframe behaves exactly as before.
+  events:
+  - name: ConnectionCreated
+    channel: window.postMessage to the parent window
+    description: >-
+      Posted to the parent window when the connection exists. With show_account_selection=True it is
+      posted only AFTER the account-selection step, so the connection already exists when the host
+      page receives it.
+  source: https://developers.improvado.io/changelog
+- family: Workspace dashboards
+  kind: hosted-surface
+  description: >-
+    Improvado-rendered dashboards belonging to a workspace, listable over the API for embedding or
+    linking from an agency/platform product.
+  list_operation: GET /api/v3/workspaces/{id}/dashboards
+  source: https://developers.improvado.io/api
+  note: >-
+    The API exposes the dashboard inventory. Improvado publishes no separate embed token or hosted
+    embed URL scheme for dashboards in the developer docs, so only the listing operation is recorded.
+- family: Whitelabel tenant domain
+  kind: hosted-surface
+  description: >-
+    Customers may run Improvado on their own domain (e.g. acme.improvado.io) instead of
+    report.improvado.io. The whitelabel domain is the OAuth issuer and MCP host for that tenant.
+  source: https://improvado.io/docs-section-topic/improvado-mcp
+  note: >-
+    Improvado states explicitly that on a whitelabel domain report.improvado.io will not authenticate
+    you — the tenant domain is load-bearing for both the embed and the MCP connection, not cosmetic.
+  cross_link: mcp/improvado-mcp.yml
+not_found:
+- web components / custom elements
+- npm-distributed UI element library
+- CDN-hosted loader script (unpkg / jsDelivr)
+- published component version or changelog for the embed itself
+x-evidence:
+- fetched: '2026-08-13'
+  url: https://developers.improvado.io/changelog.md
+  http_status: 200
+  note: August 12, 2026 entry — account selection in the connection iframe.
+- fetched: '2026-08-13'
+  url: https://improvado.io/docs-section-topic/improvado-mcp
+  http_status: 200

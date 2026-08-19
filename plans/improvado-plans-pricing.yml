@@ -1,0 +1,142 @@
+generated: '2026-08-13'
+method: searched
+source: https://improvado.io/pricing
+type: Plans
+currency: USD
+billing_period: month
+note: >-
+  Improvado publishes a real four-tier pricing page with two self-serve, priced tiers and two
+  quote-based tiers. Every number below is read verbatim from the published pricing table and its
+  "Products & Features breakdown" comparison grid; nothing is inferred. The published quotas are
+  unusually agent-relevant: "MCP actions / week" is a first-class metered unit on every tier, which
+  means Improvado prices agent access directly rather than treating it as an unmetered add-on.
+plan_count: 4
+self_serve_plans: 2
+quote_based_plans: 2
+plans:
+- name: Free Limited
+  price: 0
+  currency: USD
+  period: month
+  self_serve: true
+  cta: Start free
+  summary: Limited access to the AI Agent and MCP for free — a starting tier.
+  quotas:
+    live_api_requests: included
+    data_sources: all
+    ai_agent_and_mcp: included
+    mcp_actions_per_week: 50
+    workspaces: 1
+    rows_per_year: null
+    data_sync_frequency: null
+    actions_per_day: null
+    governance_rules: null
+    customization_credits_per_year: null
+  compliance: [SOC 2 Type II]
+  features_excluded: [HIPAA, SSO, Creative Analytics Intelligence, Multi-Touch Attribution,
+    Marketing Data Governance, Incrementality Testing, Marketing Mix Modeling, Premium Customer Support,
+    White-glove Professional Services]
+- name: MCP Only
+  price: 100
+  currency: USD
+  period: month
+  self_serve: true
+  cta: Get MCP Only
+  summary: >-
+    MCP, knowledge graph, connections and modeling — used inside the customer's own AI agent
+    (Claude Cowork, Codex, ChatGPT, etc.) with their existing LLM setup.
+  quotas:
+    live_api_requests: included
+    rows_per_year: 2000000
+    data_sync_frequency: Daily
+    mcp_actions_per_week: 300
+    workspaces: 1
+    actions_per_day: null
+    governance_rules: null
+    customization_credits_per_year: null
+  compliance: [SOC 2 Type II]
+  features_excluded: [HIPAA, SSO, Creative Analytics Intelligence, Multi-Touch Attribution,
+    Marketing Data Governance, Incrementality Testing, Marketing Mix Modeling]
+- name: Advanced
+  price: null
+  price_model: custom
+  currency: USD
+  period: month
+  self_serve: false
+  cta: Get your demo
+  badge: Most popular
+  summary: >-
+    Advanced Intelligence — Creative Analytics, Multi-Touch Attribution, Marketing Data Governance.
+    Premium Customer Support included.
+  quotas:
+    rows_per_year: 600000000
+    data_sync_frequency: Up to four times daily
+    actions_per_day: 200
+    mcp_actions_per_week: 4000
+    workspaces: 50
+    workspaces_note: Up to 50
+    governance_rules: 50
+    customization_credits_per_year: 720
+  compliance: [SOC 2 Type II, HIPAA]
+  features_included: [Creative Analytics Intelligence, Multi-Touch Attribution, Marketing Data Governance,
+    SSO via Azure/Okta, Premium Customer Support, White-glove Professional Services]
+  features_excluded: [Incrementality Testing, Marketing Mix Modeling]
+- name: Enterprise
+  price: null
+  price_model: custom
+  currency: USD
+  period: month
+  self_serve: false
+  cta: Get your demo
+  summary: >-
+    Advanced Intelligence including MMM & Incrementality Testing, SSO (Azure, Okta), White-glove
+    Professional Services.
+  quotas:
+    rows_per_year: 1000000000
+    data_sync_frequency: Custom
+    actions_per_day: 600
+    mcp_actions_per_week: 12000
+    workspaces: unlimited
+    governance_rules: 100
+    customization_credits_per_year: 960
+  compliance: [SOC 2 Type II, HIPAA]
+  features_included: [Creative Analytics Intelligence, Multi-Touch Attribution, Marketing Data Governance,
+    Incrementality Testing, Marketing Mix Modeling, SSO via Azure/Okta, Premium Customer Support,
+    White-glove Professional Services]
+metered_units:
+- unit: MCP actions / week
+  values: {Free Limited: 50, MCP Only: 300, Advanced: 4000, Enterprise: 12000}
+  note: >-
+    The agent-facing meter. Present on every tier including the free one, which is how Improvado
+    monetizes MCP access. Cross-link mcp/improvado-mcp.yml.
+- unit: Unique rows / year
+  values: {Free Limited: null, MCP Only: 2000000, Advanced: 600000000, Enterprise: 1000000000}
+- unit: Actions / day
+  values: {Free Limited: null, MCP Only: null, Advanced: 200, Enterprise: 600}
+- unit: Governance rules
+  values: {Free Limited: null, MCP Only: null, Advanced: 50, Enterprise: 100}
+- unit: Workspaces
+  values: {Free Limited: 1, MCP Only: 1, Advanced: 'up to 50', Enterprise: unlimited}
+- unit: Customization credits / year
+  values: {Free Limited: null, MCP Only: null, Advanced: 720, Enterprise: 960}
+overage:
+  published: false
+  note: >-
+    No overage rates are published on the pricing page. Quotas are stated as tier ceilings; what
+    happens on exhaustion is not documented publicly. Recorded as an honest gap, not inferred.
+sizing_tool:
+  present: true
+  description: >-
+    An interactive fit calculator on the pricing page takes annual ad spend, tracked revenue, monthly
+    active users and number of data sources and returns a recommended tier without a sales call.
+notes: >-
+  Improvado's own llms.txt states the same model in machine-readable form: "Pricing: Free Limited
+  ($0/mo) and MCP Only ($100/mo) are self-serve; Advanced and Enterprise are custom, quote-based.
+  (Source: /pricing)". The two sources agree.
+x-evidence:
+- fetched: '2026-08-13'
+  url: https://improvado.io/pricing
+  http_status: 200
+- fetched: '2026-08-13'
+  url: https://improvado.io/llms.txt
+  http_status: 200

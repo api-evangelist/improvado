@@ -1,20 +1,111 @@
-generated: '2026-07-19'
+generated: '2026-08-13'
 method: searched
-host: https://improvado.io
-documents:
-- path: /.well-known/security.txt          # RFC 9116
-  status: 200
-  file: improvado-security.txt
-- path: /.well-known/openid-configuration   # OIDC discovery
-  status: 301
-- path: /.well-known/oauth-authorization-server  # RFC 8414
-  status: 301
-- path: /.well-known/api-catalog             # RFC 9727
-  status: 301
-- path: /.well-known/ai-plugin.json
-  status: 404
-notes: >-
-  API host embedded.improvado.io returned 404 for /.well-known/openid-configuration
-  and /.well-known/oauth-authorization-server (no OIDC/OAuth discovery surface; the
-  Embedded API uses HTTP Basic + Bearer tokens, not OAuth2). Only the marketing host
-  improvado.io publishes a well-known document (security.txt).
+source: direct probe of every Improvado host
+type: WellKnown
+note: >-
+  Re-probed 2026-08-13 across all four Improvado hosts. The 2026-07-19 round probed only improvado.io
+  and embedded.improvado.io and found a single document (security.txt). Two further real documents
+  have been found since: an agents.json discovery manifest on the marketing host, and — the significant
+  one — a full RFC 8414 OAuth authorization-server metadata document on the tenant host
+  report.improvado.io, which is what gates the customer MCP server. Every 200 below carries a real
+  document; no HTML/SPA shell is recorded as a hit.
+hosts:
+- host: https://improvado.io
+  documents:
+  - path: /.well-known/security.txt
+    status: 200
+    file: improvado-security.txt
+    rfc: RFC 9116
+  - path: /.well-known/agents.json
+    status: 200
+    file: improvado-agents.json
+    spec: agents.json 0.1.0
+    note: >-
+      Advertised in Improvado's own llms.txt ("Agents flow description: /.well-known/agents.json").
+      Declares one flow, ask-question, pointing at POST https://agent.improvado.io/ask, plus a facts
+      block with cited sources. This is the agents.json specification, NOT an A2A Agent Card — it has
+      no protocolVersion, no capabilities object and no skills array — so it does NOT earn an
+      AgentCard pointer.
+  - path: /.well-known/openid-configuration
+    status: 301
+  - path: /.well-known/oauth-authorization-server
+    status: 301
+  - path: /.well-known/api-catalog
+    status: 301
+  - path: /.well-known/ai-plugin.json
+    status: 404
+  - path: /.well-known/agent-card.json
+    status: 404
+  - path: /.well-known/agent.json
+    status: 404
+- host: https://report.improvado.io
+  note: Tenant / product host — serves the customer MCP server and its authorization server.
+  documents:
+  - path: /.well-known/oauth-authorization-server
+    status: 200
+    file: improvado-oauth-authorization-server.json
+    rfc: RFC 8414
+    note: >-
+      Real OAuth 2.0 authorization-server metadata: issuer, authorize/token/revoke/introspect/register
+      endpoints, authorization_code + refresh_token grants, PKCE S256, dynamic client registration, and
+      scopes_supported [mcp:internal, mcp:customer, introspection]. Feeds scopes/improvado-scopes.yml.
+  - path: /.well-known/oauth-protected-resource/experimental/agent/api/mcp-customer/v1/invoke/
+    status: 200
+    file: improvado-oauth-protected-resource.json
+    rfc: RFC 9728
+    note: >-
+      Protected-resource metadata for the MCP endpoint. Discovered from the WWW-Authenticate header
+      returned by the live MCP endpoint, which is the intended RFC 9728 discovery path.
+  - path: /.well-known/oauth-protected-resource
+    status: 404
+    note: Only the path-suffixed resource-specific form is served, which is RFC 9728-correct.
+  - path: /.well-known/openid-configuration
+    status: 404
+  - path: /.well-known/security.txt
+    status: 404
+  - path: /.well-known/agent-card.json
+    status: 404
+- host: https://embedded.improvado.io
+  note: Embedded API v3 host.
+  documents:
+  - path: /.well-known/openid-configuration
+    status: 404
+  - path: /.well-known/oauth-authorization-server
+    status: 404
+  - path: /.well-known/agent-card.json
+    status: 404
+- host: https://agent.improvado.io
+  note: Public Agent Ask API host. Returns a JSON 404 body for every unknown path, never an HTML shell.
+  documents:
+  - path: /.well-known/agent-card.json
+    status: 404
+  - path: /.well-known/agent.json
+    status: 404
+  - path: /openapi.json
+    status: 404
+    note: >-
+      The OpenAPI describing this host is served from the marketing root instead —
+      https://improvado.io/openapi.json — saved to openapi/improvado-agent-ask-openapi.json.
+summary:
+  hosts_probed: 4
+  documents_found: 4
+  agent_card_found: false
+  agent_card_note: >-
+    /.well-known/agent-card.json and /.well-known/agent.json returned 404 on all four hosts. No A2A
+    Agent Card exists, so no a2a/ artifact and no AgentCard pointer were written.
+x-evidence:
+- fetched: '2026-08-13'
+  url: https://improvado.io/.well-known/agents.json
+  http_status: 200
+  content_type: application/json
+- fetched: '2026-08-13'
+  url: https://report.improvado.io/.well-known/oauth-authorization-server
+  http_status: 200
+  content_type: application/json
+- fetched: '2026-08-13'
+  url: https://report.improvado.io/.well-known/oauth-protected-resource/experimental/agent/api/mcp-customer/v1/invoke/
+  http_status: 200
+  content_type: application/json
+- fetched: '2026-08-13'
+  url: https://improvado.io/.well-known/agent-card.json
+  http_status: 404

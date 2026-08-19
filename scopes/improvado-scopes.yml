@@ -1,0 +1,109 @@
+generated: '2026-08-13'
+method: probed
+source: https://report.improvado.io/.well-known/oauth-authorization-server
+docs: https://improvado.io/docs-section-topic/improvado-mcp
+type: OAuthScopes
+note: >-
+  NEW 2026-08-13. The 2026-07-19 round correctly recorded that the Embedded API v3 uses HTTP Basic +
+  Bearer and has no OAuth surface — that is still true of embedded.improvado.io. But Improvado's
+  customer MCP server runs a full OAuth 2.0 authorization server on the tenant domain
+  (report.improvado.io, or a whitelabel domain), and it publishes RFC 8414 authorization-server
+  metadata and RFC 9728 protected-resource metadata ANONYMOUSLY. Both were fetched directly; every
+  scope, endpoint and grant type below is read verbatim from those documents, not from prose.
+authorization_server:
+  issuer: https://report.improvado.io
+  metadata_url: https://report.improvado.io/.well-known/oauth-authorization-server
+  metadata_file: well-known/improvado-oauth-authorization-server.json
+  http_status: 200
+  rfc: RFC 8414
+  authorization_endpoint: https://report.improvado.io/api/dts/v2/oauth/o/authorize/
+  token_endpoint: https://report.improvado.io/api/dts/v2/oauth/o/token/
+  revocation_endpoint: https://report.improvado.io/api/dts/v2/oauth/o/revoke_token/
+  introspection_endpoint: https://report.improvado.io/api/dts/v2/oauth/o/introspect/
+  registration_endpoint: https://report.improvado.io/api/dts/v2/oauth/o/register/
+  dynamic_client_registration: true
+  client_id_metadata_document_supported: true
+  grant_types_supported: [authorization_code, refresh_token]
+  response_types_supported: [code]
+  token_endpoint_auth_methods_supported: [client_secret_basic, client_secret_post, none]
+  code_challenge_methods_supported: [plain, S256]
+  pkce: true
+protected_resource:
+  resource: https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/
+  metadata_url: https://report.improvado.io/.well-known/oauth-protected-resource/experimental/agent/api/mcp-customer/v1/invoke/
+  metadata_file: well-known/improvado-oauth-protected-resource.json
+  http_status: 200
+  rfc: RFC 9728
+  authorization_servers: [https://report.improvado.io]
+  bearer_methods_supported: [header]
+  scopes_supported: [mcp:customer]
+schemes:
+- name: improvadoOAuth
+  type: oauth2
+  source: https://report.improvado.io/.well-known/oauth-authorization-server
+  flows:
+  - flow: authorizationCode
+    authorizationUrl: https://report.improvado.io/api/dts/v2/oauth/o/authorize/
+    tokenUrl: https://report.improvado.io/api/dts/v2/oauth/o/token/
+    refreshUrl: https://report.improvado.io/api/dts/v2/oauth/o/token/
+    pkce: [plain, S256]
+scopes:
+- scope: mcp:customer
+  description: >-
+    Customer-facing MCP access. The scope an external AI agent (Claude, ChatGPT/Codex, Gemini CLI,
+    Antigravity, or any MCP client) requests to call the 84-tool Improvado Customer MCP server. This
+    is the scope named in the RFC 9728 protected-resource metadata AND in the 401 WWW-Authenticate
+    challenge returned by the live endpoint.
+  flows: [authorizationCode]
+  audience: https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/
+  sources:
+  - https://report.improvado.io/.well-known/oauth-authorization-server
+  - https://report.improvado.io/.well-known/oauth-protected-resource/experimental/agent/api/mcp-customer/v1/invoke/
+  - https://improvado.io/docs-section-topic/improvado-mcp
+  documented_by_provider: true
+  provider_reference: >-
+    Improvado's Gemini CLI setup block instructs users to configure "oauth": {"scopes": ["mcp:customer"]}.
+- scope: mcp:internal
+  description: >-
+    Internal MCP access, advertised in the authorization server's scopes_supported. Not referenced in
+    any customer-facing documentation and not accepted by the customer MCP resource (whose
+    scopes_supported lists mcp:customer only). Recorded because the server advertises it; treated as
+    a first-party/internal scope, not a scope a third-party integrator should request.
+  flows: [authorizationCode]
+  sources: [https://report.improvado.io/.well-known/oauth-authorization-server]
+  documented_by_provider: false
+- scope: introspection
+  description: >-
+    Token-introspection scope, advertised in scopes_supported and paired with the RFC 7662
+    introspection endpoint. Not documented in customer-facing material.
+  flows: [authorizationCode]
+  sources: [https://report.improvado.io/.well-known/oauth-authorization-server]
+  documented_by_provider: false
+session:
+  ttl: 15 minutes
+  backing_store: Redis
+  scope_binding: workspace-scoped
+  source: https://improvado.io/docs-section-topic/improvado-mcp
+  note: >-
+    Improvado documents each MCP session as a workspace-scoped OAuth token with a 15-minute
+    Redis-backed TTL, stating that multi-tenant agent infrastructure maps 1:1 so cross-tenant leakage
+    is prevented by architecture. Distinct from the Embedded API v3's 30-minute Bearer token.
+not_covered:
+  surface: https://embedded.improvado.io (Embedded API v3)
+  reason: >-
+    The Embedded API v3 has no OAuth surface — HTTP Basic for workspace management and token minting,
+    30-minute opaque Bearer tokens for workspace-scoped resources. Its /.well-known/oauth-authorization-server
+    returns 404. See authentication/improvado-authentication.yml.
+x-evidence:
+- fetched: '2026-08-13'
+  url: https://report.improvado.io/.well-known/oauth-authorization-server
+  http_status: 200
+  content_type: application/json
+- fetched: '2026-08-13'
+  url: https://report.improvado.io/.well-known/oauth-protected-resource/experimental/agent/api/mcp-customer/v1/invoke/
+  http_status: 200
+  content_type: application/json
+- fetched: '2026-08-13'
+  url: https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/
+  http_status: 401
+  note: 'WWW-Authenticate: Bearer resource_metadata="...", scope="mcp:customer"'

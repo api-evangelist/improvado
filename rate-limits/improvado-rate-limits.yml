@@ -1,0 +1,82 @@
+generated: '2026-08-13'
+method: searched
+source: https://developers.improvado.io/rate-limits
+type: RateLimits
+limit_count: 0
+note: >-
+  Improvado publishes a rate-limits page for the Embedded API v3 that confirms limits are ENFORCED but
+  states no values. Verbatim, the entire page reads: "All API methods enforce rate limits (maximum
+  number of requests per period of time). Exact mechanism (including rate limit values, informational
+  headers and errors) will be described later." No numeric limit, no response header name, and no
+  exhaustion status code is published for the REST API. limit_count is therefore an honest 0 — the
+  provider has documented the existence of throttling without documenting the contract, which means an
+  agent cannot back off correctly. This is a real, fixable gap on the provider's side, not a gap in our
+  measurement.
+scopes:
+- scope: api-wide
+  surface: Improvado Embedded API v3 (https://embedded.improvado.io)
+  enforced: true
+  window: null
+  limit: null
+  burst: null
+  status_on_exhaustion: null
+  headers: []
+  headers_published: false
+  docs: https://developers.improvado.io/rate-limits
+  evidence: >-
+    "All API methods enforce rate limits (maximum number of requests per period of time). Exact
+    mechanism (including rate limit values, informational headers and errors) will be described later."
+- scope: public-endpoint
+  surface: Improvado Public Agent Ask API (https://agent.improvado.io/ask)
+  enforced: true
+  window: null
+  limit: null
+  burst: null
+  status_on_exhaustion: 429
+  headers: []
+  headers_published: false
+  docs: https://improvado.io/openapi.json
+  evidence: >-
+    The published OpenAPI for the public Agent Ask endpoint declares a 429 response — "Rate limited.
+    Abusive or automated bulk traffic may be throttled; retry later." Improvado's llms.txt repeats
+    this under Exclusions. The status code is documented; no numeric limit, window or Retry-After
+    header is.
+- scope: mcp-actions
+  surface: Improvado Customer MCP (https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/)
+  enforced: true
+  window: week
+  limit: null
+  limit_by_plan:
+    Free Limited: 50
+    MCP Only: 300
+    Advanced: 4000
+    Enterprise: 12000
+  burst: null
+  status_on_exhaustion: null
+  headers: []
+  headers_published: false
+  docs: https://improvado.io/pricing
+  cross_link: plans/improvado-plans-pricing.yml
+  evidence: >-
+    Improvado meters "MCP actions / week" as a priced quota on every tier. This is a commercial
+    entitlement ceiling published on the pricing page, not a documented technical rate limit — no
+    header, no error shape and no exhaustion behaviour is published — so it is recorded here as a
+    per-plan quota rather than counted in limit_count.
+  counted_in_limit_count: false
+response_headers:
+  published: false
+  observed: []
+  note: >-
+    No X-RateLimit-*, RateLimit-* or Retry-After header is documented on any surface, and none could be
+    observed unauthenticated (the REST API returns 401 before any limit applies; the MCP endpoint
+    returns 401 with only an RFC 9728 WWW-Authenticate challenge). Recorded as absent, not assumed.
+x-evidence:
+- fetched: '2026-08-13'
+  url: https://developers.improvado.io/rate-limits.md
+  http_status: 200
+- fetched: '2026-08-13'
+  url: https://improvado.io/openapi.json
+  http_status: 200
+- fetched: '2026-08-13'
+  url: https://improvado.io/pricing
+  http_status: 200

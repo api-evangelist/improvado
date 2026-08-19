@@ -1,0 +1,80 @@
+overlay: 1.0.0
+info:
+  title: API Evangelist enhancements for the Improvado Public Agent Ask API
+  version: 1.0.0
+extends: openapi/improvado-agent-ask-openapi.json
+x-generated: '2026-08-13'
+x-method: generated
+x-source: >-
+  Derived from the provider's own published spec at https://improvado.io/openapi.json plus
+  https://improvado.io/llms.txt and https://improvado.io/.well-known/agents.json. Every value added
+  below is stated by Improvado on one of those three surfaces; the overlay only makes it
+  machine-readable inside the spec. The original spec is never mutated.
+actions:
+- target: $.info
+  update:
+    x-apievangelist-provider: improvado
+    x-apievangelist-surface: public-anonymous
+    x-apievangelist-note: >-
+      One of three non-identical Improvado API surfaces. This is the only fully public, unauthenticated
+      one. See mcp/improvado-tool-crosswalk.yml for how it relates to the Embedded API v3 (documented,
+      no OpenAPI) and the customer MCP server (84 tools, OAuth-gated).
+- target: $.info
+  update:
+    x-discovery:
+      openapi: https://improvado.io/openapi.json
+      llms_txt: https://improvado.io/llms.txt
+      agents_json: https://improvado.io/.well-known/agents.json
+      note: >-
+        The spec is served from the marketing root (improvado.io) while the API itself lives on
+        agent.improvado.io; agent.improvado.io/openapi.json returns 404. Recorded so a client does not
+        conclude the spec is missing.
+- target: $.servers[0]
+  update:
+    description: Public Improvado agent query server. No authentication.
+- target: $['paths']['/ask']['post']
+  update:
+    operationId: askImprovadoAgent
+    tags: [Agent]
+    x-apievangelist-note: >-
+      The provider's spec declares no operationId and no tags. operationId askImprovadoAgent is added
+      by API Evangelist for tooling and workflow reference; it is NOT a provider-published identifier
+      and must not be treated as one.
+    x-authentication: none
+    x-alternate-request-body:
+      content_type: application/json
+      shape: '{"query": "..."}'
+      source: https://agent.improvado.io/ (service root document)
+      note: >-
+        The service root states 'JSON {"query":"..."} is also accepted' alongside the text/plain body
+        the spec declares. The spec documents only text/plain.
+    x-response-shape:
+      content_type_declared: text/plain
+      documented_json_shape: '{"request_id":"agw_...","answer":"...","continue_url":"..."}'
+      source: https://agent.improvado.io/ (service root document)
+      note: >-
+        The spec types the 200 response as a plain string. The service root documents a structured
+        response carrying request_id, answer and continue_url. Recorded as a spec/runtime divergence,
+        not corrected in place.
+    x-usage-constraints:
+      source: https://improvado.io/llms.txt
+      constraints:
+      - One public, non-sensitive question per request; no account required.
+      - Never send credentials, private customer data, personal information, access tokens, or unpublished material.
+      - Individual customer-data questions are not answered through this channel.
+      - Abusive or automated bulk traffic may be rate limited.
+- target: $['paths']['/ask']['post']['responses']['429']
+  update:
+    x-retry-guidance: >-
+      No Retry-After header and no numeric limit are published. See rate-limits/improvado-rate-limits.yml —
+      an agent must fall back to conservative exponential backoff.
+- target: $
+  update:
+    x-apievangelist-crosslinks:
+      authentication: authentication/improvado-authentication.yml
+      conventions: conventions/improvado-conventions.yml
+      errors: errors/improvado-error-codes.yml
+      rate_limits: rate-limits/improvado-rate-limits.yml
+      plans: plans/improvado-plans-pricing.yml
+      mcp: mcp/improvado-mcp.yml
+      crosswalk: mcp/improvado-tool-crosswalk.yml

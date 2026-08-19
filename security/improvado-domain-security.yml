@@ -1,4 +1,4 @@
-generated: '2026-07-19'
+generated: '2026-08-13'
 method: probed
 source: live DNS/TLS/HTTP probes of apis.yml + OpenAPI hosts
 hosts:
@@ -8,14 +8,25 @@ hosts:
   cert_expires: Nov 15 23:59:59 2026 GMT
   hsts: true
   hsts_max_age: 31536000
+- host: developers.improvado.io
+  https: true
+  tls_version: TLSv1.3
+  cert_expires: Nov 21 23:59:59 2026 GMT
+  hsts: true
+  hsts_max_age: 31536000
+- host: embedded.improvado.io
+  https: true
+  tls_version: TLSv1.3
+  cert_expires: Oct  1 15:53:24 2026 GMT
+  hsts: null
 domains:
 - domain: improvado.io
   dnssec: false
   caa:
-  - 0 issue "letsencrypt.org"
-  - 0 issue "pki.goog; cansignhttpexchanges=yes"
   - 0 iodef "mailto:security+caa@improvado.io"
   - 0 issue "amazon.com"
+  - 0 issue "letsencrypt.org"
+  - 0 issue "pki.goog; cansignhttpexchanges=yes"
   spf: true
   dmarc: true
   dmarc_policy: reject

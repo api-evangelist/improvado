@@ -1,14 +1,173 @@
-generated: '2026-07-19'
-method: generated
-source: https://developers.improvado.io/api
+generated: '2026-08-13'
+method: searched
+source: https://github.com/tekliner/improvado-agentic-frameworks-and-skills
+type: AgentSkill
 note: >-
-  Improvado publishes no OpenAPI spec, so skill steps are grounded in the provider's
-  documented Embedded API v3 operations (METHOD + path, verbatim from the API reference
-  and llms.txt) rather than operationIds. No operations invented.
-skills:
+  UPGRADE (2026-08-13) from generated to searched. Improvado PUBLISHES its own Agent Skills. The 20
+  skills under provider_published[] are first-party work distributed as a Codex plugin alongside the
+  customer MCP server; Improvado's MCP documentation tells users to install it by repo slug ("Codex
+  pulls the plugin from the Improvado repository") and the repo's .codex-plugin/plugin.json declares
+  author.name "Improvado", developerName "Improvado", the Improvado brand colour #FF3186 and the
+  Improvado logo — which is how first-party ownership was established despite the repository sitting
+  under a non-Improvado GitHub account. Names and descriptions are captured VERBATIM from each
+  SKILL.md frontmatter; the skill bodies are not mirrored here, the repository is the source of truth.
+  The two API Evangelist-generated skills are retained below under generated[] because they cover the
+  Embedded API v3 REST surface, which the provider's own skills do not — those target the MCP tools.
+provider_published:
+  repository: https://github.com/tekliner/improvado-agentic-frameworks-and-skills
+  branch: master
+  plugin: .codex-plugin/plugin.json
+  plugin_version: 0.1.0
+  plugin_name: improvado-agentic-frameworks-and-skills
+  ships_with: mcp/improvado-mcp.yml (the same plugin bundles .mcp.json pointing at the customer MCP endpoint)
+  install: 'Codex -> Plugins -> add: Source tekliner/improvado-agentic-frameworks-and-skills, Git ref master'
+  skill_count: 20
+  ownership_evidence: >-
+    plugin.json author.name "Improvado"; developerName "Improvado"; brandColor #FF3186; logo
+    assets/improvado-logo.png; and https://improvado.io/docs-section-topic/improvado-mcp names it as
+    the Improvado repository for the Codex plugin.
+  skills:
+  - name: campaign-launcher-oss
+    path: skills/campaign-launcher-oss/SKILL.md
+    description: >-
+      Open-source multi-channel campaign launcher. Orchestrates marketing experiments from
+      ICP/positioning input through planning, creative production, and parallel channel launch
+      (Google Ads, Meta Ads, email outreach). No proprietary infrastructure required.
+  - name: cmo-cross-channel-dashboard
+    path: skills/cmo-cross-channel-dashboard/SKILL.md
+    description: >-
+      Generate a CMO Cross-Channel Performance Dashboard — funnel-stage executive view of marketing
+      spend, pull-through, and per-channel efficiency across Meta, Google, LinkedIn, TikTok, Reddit,
+      TTD, and the Discovery API long tail. Warehouse-first (ClickHouse _all_data views) with Discovery
+      API fallback.
+    tools: [clickhouseTool, discoveryRequestTool, visualizationTool]
+  - name: daily-performance-report
+    path: skills/daily-performance-report/SKILL.md
+    description: >-
+      Generate a Daily Performance Console — multi-channel operational dashboard for performance
+      marketers. Blended KPI strip, per-channel split with health flags, universal trend chart, and
+      three tabs (Warnings / Recommendations / Monthly Pacing). Discovery API only, all data live.
+    tools: [discoveryRequestTool]
+  - name: discovery-api
+    path: skills/discovery-api/SKILL.md
+    frontmatter_name: discovery
+    description: >-
+      AUTO-INVOKE when the user asks to see, fetch, or check current/live/real-time data from any ad
+      platform, inspect ad accounts/campaigns/ads, or any task requiring discoveryRequestTool,
+      discoveryListConnectorsTool or discoveryListAccountsTool. Defines the mandatory URL/version
+      protocol; use BEFORE any direct platform API call.
+    tools: [discoveryRequestTool, discoveryListConnectorsTool, discoveryListAccountsTool]
+  - name: field-mapping
+    path: skills/field-mapping/SKILL.md
+    description: >-
+      Field mapping and data extraction setup — find report types and validate fields, using both the
+      Extract Templates tooling and the Data Dictionary.
+    tools: [getExtractTemplatesTool]
+  - name: flat-data-file-import
+    path: skills/flat-data-file-import/SKILL.md
+    description: >-
+      File import workflow — upload CSV/Excel/TSV files, or set up email-based, managed SFTP, or
+      managed S3 file import into Improvado.
+    tools: [uploadFlatDataFileTool, createFlatDataExtractTool, previewEmailImportAddressTool]
+  - name: full-marketing-audit
+    path: skills/full-marketing-audit/SKILL.md
+    description: >-
+      Paid-media audit in three phases — connection check + heal (Discovery API only), parallel
+      per-channel audits, synthesis into a dashboard. Read-only. Idempotent on
+      (workspace_id, audit_window_start_utc, version).
+    tools: [discoveryRequestTool]
+  - name: mdg-create-and-edit
+    path: skills/mdg-create-and-edit/SKILL.md
+    description: >-
+      Create, edit, and manage Marketing Data Governance rules — data governance, compliance,
+      monitoring rules and alerts.
+    tools: [clickhouseTool, createMdgViewTool, getMdgRuleLibraryExampleTool, testMdgNotificationTool]
+  - name: notebook-editor
+    path: skills/notebook-editor/SKILL.md
+    description: Edit and run notebook/recipe cells with SQL, union, join operations.
+    tools: [createRecipeTool, createRecipeStepTool, activateRecipeTool]
+  - name: recipe-qa-rules
+    path: skills/recipe-qa-rules/SKILL.md
+    description: >-
+      Full data QA flow for a recipe view — discovers pipeline topology, manages QA Requirements
+      Documents (QRDs), runs hardcoded and QRD-defined quality checks, detects JOIN fan-outs, and
+      resolves issues with user approval.
+  - name: sql-import
+    path: skills/sql-import/SKILL.md
+    description: >-
+      SQL import workflow — connect to MySQL/Postgres/MSSQL, pick a table or write a custom query,
+      discover schema, preview rows, and create a scheduled extract.
+    tools: [createConnectionTool, createExtractTool]
+  - name: weekly-creative-performance
+    path: skills/weekly-creative-performance/SKILL.md
+    description: >-
+      Build a Creative Performance Dashboard with creative thumbnails, per-creative performance
+      metrics, fatigue segments, and Discovery API data. Use for weekly creative performance reports,
+      creative galleries, and creative fatigue analysis across Google Ads, Facebook, LinkedIn, TikTok,
+      and Pinterest.
+    tools: [discoveryRequestTool]
+  - name: temporal-pipelines
+    path: skills/temporal-pipelines/SKILL.md
+    description: >-
+      Create, edit, run, and debug Temporal workflow pipelines — pure Python Temporal workflows (with
+      fan-out/fan-in, child workflows, signals, reusable activities) authored via
+      `improvado-pipeline-sdk` and executed through the Workflow Manager API.
+    package: improvado-pipeline-sdk
+    package_cross_link: packages/improvado-packages.yml
+    note: >-
+      The only provider skill that installs a real package — `pip install --upgrade
+      improvado-pipeline-sdk`. This is how the first-party PyPI SDK was discovered; the developer
+      portal never mentions it.
+  - name: secure-agents
+    path: skills/secure-agents/SKILL.md
+    description: >-
+      30-second basic security check for AI agents. Three plain checks any non-engineer can run —
+      leaked credentials, prompt injection sinks, missing audit trail. Works on Claude Code, Cursor,
+      Cline, Codex, custom Python/TS agents.
+  - name: knowledge-framework
+    path: skills/knowledge-framework/SKILL.md
+    description: >-
+      Auto-applies a MECE/BFO framework (thesis, Mermaid TD/LR, numbered sections, Ground Truth) to
+      any .md file creation.
+  - name: skill-creator
+    path: skills/skill-creator/SKILL.md
+    description: >-
+      Create/improve self-healing Claude Code skills with the Knowledge Framework and version tracking.
+  - name: multi-agent-orchestrator
+    path: skills/multi-agent-orchestrator/SKILL.md
+    description: >-
+      Orchestrate parallel CLI agents (Claude Code, Codex, Gemini) for competitive evaluation — launch
+      N agents with an identical task, compare self-evaluations, declare a winner on measurable
+      success criteria.
+  - name: claude-code-sessions
+    path: skills/claude-code-sessions/SKILL.md
+    description: >-
+      Session management for Claude Code — search, analyze, and resume conversations from any
+      directory.
+  - name: google-meet-manager
+    path: skills/google-meet-manager/SKILL.md
+    description: >-
+      Manage Google Meet recordings, transcripts, and Gemini Notes from Google Drive, via
+      discoveryRequestTool against the google_drive and google_docs connectors.
+    tools: [discoveryRequestTool]
+  - name: youtube-to-knowledge-doc
+    path: skills/youtube-to-knowledge-doc/SKILL.md
+    description: >-
+      Use when user provides a YouTube URL and says "document this", "create notes", or "save this
+      video". Automatically extracts transcript, determines folder placement, and generates Knowledge
+      Framework documentation with MECE structure, Mermaid diagrams, and clickable timestamp citations.
+  scope_note: >-
+    Improvado's published skills are written against the MCP TOOL surface (discoveryRequestTool,
+    clickhouseTool, createMdgViewTool, …), not against the Embedded API v3 REST operations. Four of
+    the twenty (knowledge-framework, skill-creator, multi-agent-orchestrator, claude-code-sessions)
+    are general agent-engineering skills rather than Improvado-API skills; they are listed for
+    completeness and flagged here rather than silently counted as API skills.
+generated:
 - file: improvado-connect-and-extract.md
   name: Connect a data source and run an extract
+  method: generated
   api: Improvado Embedded API v3
+  surface: rest
   operations:
   - POST /api/v3/token
   - GET /api/v3/datasources
@@ -19,10 +178,28 @@ skills:
   - GET /api/v3/extracts/{id}
 - file: improvado-register-webhook.md
   name: Register and verify a webhook endpoint
+  method: generated
   api: Improvado Embedded API v3
+  surface: rest
   operations:
   - POST /api/v3/token
   - GET /api/v3/webhook_event_types/
   - POST /api/v3/webhook_endpoints/
   - POST /api/v3/webhook_endpoints/{id}/verify/
   - POST /api/v3/webhook_endpoints/{id}/regenerate_secret/
+generated_note: >-
+  Improvado publishes no OpenAPI for the Embedded API v3, so these two skills are grounded in the
+  provider's documented operations (METHOD + path, verbatim from the API reference and llms.txt)
+  rather than operationIds. No operations invented. They remain valuable because the provider's own
+  skills cover only the MCP surface, and the webhook surface in particular is REST-only — see
+  mcp/improvado-tool-crosswalk.yml rest_only[].
+x-evidence:
+- fetched: '2026-08-13'
+  url: https://api.github.com/repos/tekliner/improvado-agentic-frameworks-and-skills/git/trees/master?recursive=1
+  http_status: 200
+- fetched: '2026-08-13'
+  url: https://raw.githubusercontent.com/tekliner/improvado-agentic-frameworks-and-skills/master/.codex-plugin/plugin.json
+  http_status: 200
+- fetched: '2026-08-13'
+  url: https://improvado.io/docs-section-topic/improvado-mcp
+  http_status: 200
