@@ -32,7 +32,7 @@ x-backed-by:
 - bullpen-capital
 x-tier: enriched
 x-tier-reason: three published API surfaces (REST, MCP, public agent endpoint) with OpenAPI, OAuth discovery and provider-published agent skills
-specificationVersion: '0.20'
+specificationVersion: '0.23'
 created: '2026-07-17'
 modified: '2026-08-13'
 tags:
