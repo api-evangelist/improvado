@@ -51,11 +51,10 @@ tags:
 apis:
 - name: Improvado Embedded API v3
   description: >-
-    Workspace-scoped REST API for embedding Improvado's data extraction, transformation,
-    and load pipeline into agency and platform products. Manages data sources,
-    connections, accounts, extraction templates, extracts, destinations, data tables,
-    loads, automated recipes, custom roles, and webhook endpoints. Basic auth for
-    workspace management; 30-minute Bearer tokens for workspace-scoped resources.
+    Workspace-scoped REST API for embedding Improvado's data extraction, transformation, and load pipeline
+    into agency and platform products. Manages data sources, connections, accounts, extraction templates,
+    extracts, destinations, data tables, loads, automated recipes, custom roles, and webhook endpoints.
+    Basic auth for workspace management; 30-minute Bearer tokens for workspace-scoped resources.
   humanURL: https://developers.improvado.io/api
   baseURL: https://embedded.improvado.io
   tags:
@@ -95,15 +94,14 @@ apis:
     url: components/improvado-components.yml
 - name: Improvado Customer MCP
   description: >-
-    Hosted, remote Model Context Protocol server exposing Improvado's marketing data platform to any
-    MCP client (Claude, ChatGPT/Codex, Gemini CLI, Antigravity, Cursor) as 83 published tools across
-    twelve categories: warehouse SQL, live Discovery API passthrough to 1,000+ upstream ad and
-    analytics platforms, ETL extract/load/run management, custom Temporal pipelines, Marketing Data
-    Governance rules, AI recipes and notebooks, dashboards, documents and workspace control.
-    JSON-RPC 2.0 over HTTP, gated by OAuth 2.0 (authorization code + PKCE, scope mcp:customer) against
-    the customer's existing Improvado account, with workspace-scoped 15-minute sessions. The endpoint
-    host is the customer's own tenant domain. Metered and sold: MCP actions per week is a priced quota
-    on every plan tier including the free one.
+    Hosted, remote Model Context Protocol server exposing Improvado's marketing data platform to any MCP
+    client (Claude, ChatGPT/Codex, Gemini CLI, Antigravity, Cursor) as 83 published tools across twelve
+    categories: warehouse SQL, live Discovery API passthrough to 1,000+ upstream ad and analytics platforms,
+    ETL extract/load/run management, custom Temporal pipelines, Marketing Data Governance rules, AI recipes
+    and notebooks, dashboards, documents and workspace control. JSON-RPC 2.0 over HTTP, gated by OAuth
+    2.0 (authorization code + PKCE, scope mcp:customer) against the customer's existing Improvado account,
+    with workspace-scoped 15-minute sessions. The endpoint host is the customer's own tenant domain. Metered
+    and sold: MCP actions per week is a priced quota on every plan tier including the free one.
   humanURL: https://improvado.io/docs-section-topic/improvado-mcp
   baseURL: https://report.improvado.io
   tags:
@@ -127,24 +125,16 @@ apis:
     url: plans/improvado-plans-pricing.yml
   - type: SourceCode
     url: https://github.com/tekliner/improvado-agentic-frameworks-and-skills
-- name: Improvado Public Agent Ask API
-  description: >-
-    Free, unauthenticated plain-text question endpoint for AI agents. POST a question and receive a
-    cited plain-text answer about marketing data architecture, connectors, pipelines, attribution and
-    MCP design, carrying a request id and an optional continuation URL. Improvado publishes an
-    OpenAPI 3.1.0 description of it, advertises it from its llms.txt and describes the flow in an
-    agents.json discovery manifest. Public product and architecture questions only — no credentials or
-    customer data may be sent, and abusive bulk traffic may be throttled.
-  humanURL: https://improvado.io/llms.txt
-  baseURL: https://agent.improvado.io
+- aid: improvado:improvado-ask-api
+  name: Improvado Ask API
+  description: The Ask API from Improvado — 1 operation(s) for ask.
+  humanURL: https://developers.improvado.io/api
+  baseURL: https://embedded.improvado.io
   tags:
-  - AI Agents
-  - Marketing Intelligence
+  - Ask
   properties:
   - type: OpenAPI
-    url: openapi/improvado-agent-ask-openapi.json
-  - type: Overlay
-    url: overlays/improvado-agent-ask-overlay.yaml
+    url: openapi/improvado-ask-api-openapi.yml
   - type: Documentation
     url: https://improvado.io/llms.txt
   - type: LLMsTxt
