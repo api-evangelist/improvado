@@ -13,6 +13,19 @@ description: >-
   SOC 2 / HIPAA / GDPR trust center, a public status page, a dated API changelog, and a
   responsible-disclosure security program.
 url: https://raw.githubusercontent.com/api-evangelist/improvado/refs/heads/main/apis.yml
+deliveryModel:
+  model: unknown
+  open_source: unknown
+  commercial: true
+  callable_host: true
+  label: Delivery model not determined — needs a product licence on record
+  confidence: low
+  source:
+  - openapi
+  - pricing
+  - repository-unlicensed
+  generated: '2026-08-28'
+  method: derived
 accessModel:
   pricing: unknown
   onboarding: self-serve
