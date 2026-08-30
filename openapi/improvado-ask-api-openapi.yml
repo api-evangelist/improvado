@@ -1,0 +1,38 @@
+openapi: 3.2.0
+info:
+  title: Improvado Public Agent Ask API
+  version: 1.0.0
+  description: Free public plain-text question endpoint for AI agents. Ask a question and get a cited answer about marketing data architecture, connectors, pipelines, attribution, and MCP design. This endpoint is open and does not require authentication.
+  termsOfService: https://improvado.io/legal/terms-of-use
+  contact:
+    url: https://improvado.io/register/talk-to-an-expert
+servers:
+- url: https://agent.improvado.io
+tags:
+- name: Ask
+paths:
+  /ask:
+    post:
+      summary: Ask a plain-text question and receive a cited plain-text answer
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+            example: "Page: https://improvado.io/blog/marketing-channels \nQuestion: Which ad platforms does Improvado support natively?"
+      responses:
+        '200':
+          description: Plain-text cited answer including a request id and optional continuation URL
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Malformed request
+        '429':
+          description: Rate limited. Abusive or automated bulk traffic may be throttled; retry later.
+      tags:
+      - Ask
+externalDocs:
+  url: https://improvado.io/llms.txt
