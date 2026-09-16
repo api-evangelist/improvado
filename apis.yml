@@ -1,17 +1,14 @@
 aid: improvado
 name: Improvado
-description: >-
-  Improvado is a marketing intelligence and AI-agent platform that connects, extracts,
-  transforms, and loads data from 876+ marketing, advertising, sales, and analytics
-  sources into governed data pipelines, warehouses, and BI tools. Its Embedded API v3
-  (base https://embedded.improvado.io, all paths under /api/v3/) gives agencies and
-  platforms programmatic, workspace-scoped control over data sources, connections and
-  accounts, extraction templates and extracts, destinations, data tables, loads,
-  automated recipes, custom roles, and webhook endpoints for load, transformation, and
-  extraction lifecycle events. Authentication is HTTP Basic for workspace management and
-  short-lived Bearer tokens for workspace-scoped resources. The platform maintains a
-  SOC 2 / HIPAA / GDPR trust center, a public status page, a dated API changelog, and a
-  responsible-disclosure security program.
+description: Improvado is a marketing intelligence and AI-agent platform that connects, extracts, transforms,
+  and loads data from 876+ marketing, advertising, sales, and analytics sources into governed data pipelines,
+  warehouses, and BI tools. Its Embedded API v3 (base https://embedded.improvado.io, all paths under /api/v3/)
+  gives agencies and platforms programmatic, workspace-scoped control over data sources, connections and
+  accounts, extraction templates and extracts, destinations, data tables, loads, automated recipes, custom
+  roles, and webhook endpoints for load, transformation, and extraction lifecycle events. Authentication
+  is HTTP Basic for workspace management and short-lived Bearer tokens for workspace-scoped resources.
+  The platform maintains a SOC 2 / HIPAA / GDPR trust center, a public status page, a dated API changelog,
+  and a responsible-disclosure security program.
 url: https://raw.githubusercontent.com/api-evangelist/improvado/refs/heads/main/apis.yml
 deliveryModel:
   model: unknown
@@ -44,10 +41,11 @@ x-source: vc-portfolio
 x-backed-by:
 - bullpen-capital
 x-tier: enriched
-x-tier-reason: three published API surfaces (REST, MCP, public agent endpoint) with OpenAPI, OAuth discovery and provider-published agent skills
+x-tier-reason: three published API surfaces (REST, MCP, public agent endpoint) with OpenAPI, OAuth discovery
+  and provider-published agent skills
 specificationVersion: '0.23'
 created: '2026-07-17'
-modified: '2026-08-13'
+modified: '2026-09-16'
 tags:
 - Company
 - Marketing
@@ -63,11 +61,10 @@ tags:
 - Agent Readiness
 apis:
 - name: Improvado Embedded API v3
-  description: >-
-    Workspace-scoped REST API for embedding Improvado's data extraction, transformation, and load pipeline
-    into agency and platform products. Manages data sources, connections, accounts, extraction templates,
-    extracts, destinations, data tables, loads, automated recipes, custom roles, and webhook endpoints.
-    Basic auth for workspace management; 30-minute Bearer tokens for workspace-scoped resources.
+  description: Workspace-scoped REST API for embedding Improvado's data extraction, transformation, and
+    load pipeline into agency and platform products. Manages data sources, connections, accounts, extraction
+    templates, extracts, destinations, data tables, loads, automated recipes, custom roles, and webhook
+    endpoints. Basic auth for workspace management; 30-minute Bearer tokens for workspace-scoped resources.
   humanURL: https://developers.improvado.io/api
   baseURL: https://embedded.improvado.io
   tags:
@@ -106,15 +103,15 @@ apis:
   - type: Components
     url: components/improvado-components.yml
 - name: Improvado Customer MCP
-  description: >-
-    Hosted, remote Model Context Protocol server exposing Improvado's marketing data platform to any MCP
-    client (Claude, ChatGPT/Codex, Gemini CLI, Antigravity, Cursor) as 83 published tools across twelve
-    categories: warehouse SQL, live Discovery API passthrough to 1,000+ upstream ad and analytics platforms,
-    ETL extract/load/run management, custom Temporal pipelines, Marketing Data Governance rules, AI recipes
-    and notebooks, dashboards, documents and workspace control. JSON-RPC 2.0 over HTTP, gated by OAuth
-    2.0 (authorization code + PKCE, scope mcp:customer) against the customer's existing Improvado account,
-    with workspace-scoped 15-minute sessions. The endpoint host is the customer's own tenant domain. Metered
-    and sold: MCP actions per week is a priced quota on every plan tier including the free one.
+  description: 'Hosted, remote Model Context Protocol server exposing Improvado''s marketing data platform
+    to any MCP client (Claude, ChatGPT/Codex, Gemini CLI, Antigravity, Cursor) as 83 published tools across
+    twelve categories: warehouse SQL, live Discovery API passthrough to 1,000+ upstream ad and analytics
+    platforms, ETL extract/load/run management, custom Temporal pipelines, Marketing Data Governance rules,
+    AI recipes and notebooks, dashboards, documents and workspace control. JSON-RPC 2.0 over HTTP, gated
+    by OAuth 2.0 (authorization code + PKCE, scope mcp:customer) against the customer''s existing Improvado
+    account, with workspace-scoped 15-minute sessions. The endpoint host is the customer''s own tenant
+    domain. Metered and sold: MCP actions per week is a priced quota on every plan tier including the
+    free one.'
   humanURL: https://improvado.io/docs-section-topic/improvado-mcp
   baseURL: https://report.improvado.io
   tags:
@@ -231,7 +228,7 @@ common:
 - type: AgentSkill
   url: skills/_index.yml
 - type: OpenAPI
-  url: openapi/improvado-agent-ask-openapi.json
+  url: openapi/_original/improvado-agent-ask-openapi.json
 - type: Overlay
   url: overlays/improvado-agent-ask-overlay.yaml
 - type: ToolCrosswalk
