@@ -34,5 +34,7 @@ paths:
           description: Rate limited. Abusive or automated bulk traffic may be throttled; retry later.
       tags:
       - Ask
+      operationId: postAsk
+      x-operation-id-source: derived
 externalDocs:
   url: https://improvado.io/llms.txt

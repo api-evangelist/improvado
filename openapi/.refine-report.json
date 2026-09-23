@@ -1,0 +1,22 @@
+{
+  "provider": "improvado",
+  "sources": [
+    "_original/improvado-agent-ask-openapi.json"
+  ],
+  "outputs": [
+    "improvado-ask-api-openapi.yml"
+  ],
+  "archived": [],
+  "errors": [],
+  "warnings": [],
+  "notes": [
+    "sourced from openapi/_original/ (1 archived document(s)); previously refined output at the top level was skipped rather than re-split",
+    "improvado-agent-ask-openapi.json: upgraded openapi 3.1.0 -> OpenAPI 3.2.0",
+    "improvado-agent-ask-openapi.json: tagged paths POST /ask -> Ask",
+    "improvado-agent-ask-openapi.json: declared missing tag: Ask",
+    "apis.yml register: already-registered"
+  ],
+  "skipped": [
+    "improvado-ask-api-openapi.yml: previously refined output, superseded by openapi/_original/"
+  ]
+}

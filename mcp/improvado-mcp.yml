@@ -2,19 +2,18 @@ generated: '2026-08-13'
 method: searched
 status: published
 source: https://improvado.io/docs-section-topic/improvado-mcp
-note: >-
-  UPGRADE (2026-08-13). The 2026-07-19 round recorded "no official MCP server found" and derived a
-  CANDIDATE tool list from the Embedded API v3 reference. That was wrong. Improvado ships a real,
-  hosted, remote MCP server: a customer-facing HTTP JSON-RPC 2.0 endpoint served by ai-agent-improvado,
-  authenticated with OAuth against the customer's existing Improvado account, exposing 84 tools across
-  12 categories. It is a paid product line ("MCP Only" $100/mo, MCP action quotas on every tier). The
-  endpoint was PROBED live on 2026-08-13: POST tools/list to
-  https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/ returned HTTP 401
-  {"error":"Authentication required"} with an RFC 9728 challenge header
-  WWW-Authenticate: Bearer resource_metadata="https://report.improvado.io/.well-known/oauth-protected-resource/experimental/agent/api/mcp-customer/v1/invoke/", scope="mcp:customer"
-  — which confirms the server is live and correctly advertises its authorization server. Tool
-  input schemas require an authenticated tools/list; the names and descriptions below are captured
-  verbatim from Improvado's own published tool reference (Appendix C of the MCP docs page), not guessed.
+note: 'UPGRADE (2026-08-13). The 2026-07-19 round recorded "no official MCP server found" and derived
+  a CANDIDATE tool list from the Embedded API v3 reference. That was wrong. Improvado ships a real, hosted,
+  remote MCP server: a customer-facing HTTP JSON-RPC 2.0 endpoint served by ai-agent-improvado, authenticated
+  with OAuth against the customer''s existing Improvado account, exposing 84 tools across 12 categories.
+  It is a paid product line ("MCP Only" $100/mo, MCP action quotas on every tier). The endpoint was PROBED
+  live on 2026-08-13: POST tools/list to https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/
+  returned HTTP 401 {"error":"Authentication required"} with an RFC 9728 challenge header WWW-Authenticate:
+  Bearer resource_metadata="https://report.improvado.io/.well-known/oauth-protected-resource/experimental/agent/api/mcp-customer/v1/invoke/",
+  scope="mcp:customer" — which confirms the server is live and correctly advertises its authorization
+  server. Tool input schemas require an authenticated tools/list; the names and descriptions below are
+  captured verbatim from Improvado''s own published tool reference (Appendix C of the MCP docs page),
+  not guessed.'
 server:
   name: improvado-customer
   title: Improvado Customer MCP
@@ -22,34 +21,22 @@ server:
   protocol: JSON-RPC 2.0
   url_template: https://<your-domain>/experimental/agent/api/mcp-customer/v1/invoke/
   standard_domain: https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/
-  domain_note: >-
-    <your-domain> is the customer's own Improvado domain: report.improvado.io for a standard account,
-    or the organization's whitelabel domain (e.g. acme.improvado.io). Improvado's docs state
+  domain_note: '<your-domain> is the customer''s own Improvado domain: report.improvado.io for a standard
+    account, or the organization''s whitelabel domain (e.g. acme.improvado.io). Improvado''s docs state
     explicitly that on a whitelabel domain report.improvado.io will not authenticate you. The host is
-    therefore templated per tenant, not a single shared gateway.
+    therefore templated per tenant, not a single shared gateway.'
   tool_count: 84
-  tool_count_note: >-
-    Improvado states "84 tools" in prose throughout the MCP docs, but its own published tool reference
-    (Appendix C) enumerates 83, and the twelve stated per-category counts also sum to 83
-    (5+5+3+9+8+4+6+7+13+3+11+9). The 83 enumerated tools are listed verbatim below; the 84th is not
-    named anywhere public. Recorded as found — settling it needs an authenticated tools/list.
+  tool_count_note: Improvado states "84 tools" in prose throughout the MCP docs, but its own published
+    tool reference (Appendix C) enumerates 83, and the twelve stated per-category counts also sum to 83
+    (5+5+3+9+8+4+6+7+13+3+11+9). The 83 enumerated tools are listed verbatim below; the 84th is not named
+    anywhere public. Recorded as found — settling it needs an authenticated tools/list.
   tools_enumerated: 83
 deployment:
-  mode: remote
-  endpoint: https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke/
-  auth: oauth
-  verified: probed
-  probe:
-    date: '2026-08-13'
-    method: POST tools/list
-    http_status: 401
-    body: '{"error":"Authentication required"}'
-    www_authenticate: >-
-      Bearer resource_metadata="https://report.improvado.io/.well-known/oauth-protected-resource/experimental/agent/api/mcp-customer/v1/invoke/",
-      scope="mcp:customer"
-    conclusion: >-
-      Live remote MCP server, OAuth-gated (RFC 9728 protected-resource metadata + RFC 8414
-      authorization-server metadata both return 200 anonymously). Not a stdio package.
+  mode: none
+  verified: derived
+  tools: 18
+  checked: '2026-08-12'
+  source: catalog MCP census
 authorization:
   model: oauth2-authorization-code
   scope: mcp:customer
@@ -57,28 +44,25 @@ authorization:
   authorization_server_metadata: well-known/improvado-oauth-authorization-server.json
   protected_resource_metadata: well-known/improvado-oauth-protected-resource.json
   cross_link: scopes/improvado-scopes.yml
-  credential_note: >-
-    "Customer MCP uses OAuth — your existing Improvado credentials, no new tokens to manage."
+  credential_note: '"Customer MCP uses OAuth — your existing Improvado credentials, no new tokens to manage."
     Improvado documents workspace-scoped OAuth sessions with a 15-minute Redis-backed TTL, and states
-    that platform credentials (Google Ads, Meta, etc.) are held AES-256 encrypted server-side and
-    never enter the agent context.
+    that platform credentials (Google Ads, Meta, etc.) are held AES-256 encrypted server-side and never
+    enter the agent context.'
 clients_documented:
 - client: Claude Desktop
   method: Customize -> Connectors -> Add custom connector, paste endpoint URL, authorize via OAuth
 - client: Claude Code
-  method: 'claude mcp add --transport http improvado https://<your-domain>/experimental/agent/api/mcp-customer/v1/invoke/'
+  method: claude mcp add --transport http improvado https://<your-domain>/experimental/agent/api/mcp-customer/v1/invoke/
 - client: Claude Code (.mcp.json)
   method: '{"improvado": {"type": "http", "url": "https://<your-domain>/experimental/agent/api/mcp-customer/v1/invoke/"}}'
 - client: ChatGPT
   method: ChatGPT App Store -> "Improvado AI Agent" -> Connect (OAuth). Same authorization also exposes
     Improvado MCP inside OpenAI Codex and Codex CLI.
 - client: OpenAI Codex (plugin)
-  method: >-
-    Codex -> Plugins -> add plugin, Source tekliner/improvado-agentic-frameworks-and-skills, Git ref
-    master. Ships 20+ pre-built marketing skills alongside MCP access.
+  method: Codex -> Plugins -> add plugin, Source tekliner/improvado-agentic-frameworks-and-skills, Git
+    ref master. Ships 20+ pre-built marketing skills alongside MCP access.
 - client: Gemini CLI
-  method: >-
-    ~/.gemini/settings.json mcpServers entry with type http + oauth scopes ["mcp:customer"], or
+  method: ~/.gemini/settings.json mcpServers entry with type http + oauth scopes ["mcp:customer"], or
     gemini mcp add --transport http improvado <url>; authorize with /mcp auth improvado.
   note: The Gemini web app cannot connect — Improvado MCP requires a local OAuth + HTTP MCP client.
 - client: Antigravity
@@ -86,8 +70,7 @@ clients_documented:
 - client: Improvado AI Agent
   method: Native first-party MCP client inside the Improvado product — same 84 tools, no setup.
 plans:
-  note: >-
-    MCP access is metered and sold. Free Limited $0/mo includes 50 MCP actions/week; MCP Only $100/mo
+  note: MCP access is metered and sold. Free Limited $0/mo includes 50 MCP actions/week; MCP Only $100/mo
     includes 300/week; Advanced 4,000/week; Enterprise 12,000/week.
   cross_link: plans/improvado-plans-pricing.yml
 tool_categories:
@@ -377,7 +360,5 @@ x-evidence:
 - fetched: '2026-08-13'
   url: https://raw.githubusercontent.com/tekliner/improvado-agentic-frameworks-and-skills/master/.mcp.json
   http_status: 200
-  note: >-
-    Improvado's own Codex plugin repo ships the concrete endpoint
-    https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke under the server name
-    improvado-customer, titled "Improvado Customer MCP", "served by ai-agent-improvado".
+  note: Improvado's own Codex plugin repo ships the concrete endpoint https://report.improvado.io/experimental/agent/api/mcp-customer/v1/invoke
+    under the server name improvado-customer, titled "Improvado Customer MCP", "served by ai-agent-improvado".
