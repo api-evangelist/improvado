@@ -49,6 +49,9 @@ x-tier-reason: three published API surfaces (REST, MCP, public agent endpoint) w
 specificationVersion: '0.23'
 created: '2026-07-17'
 modified: '2026-09-16'
+x-docs-platform: zudoku
+x-docs-platform-confidence: medium
+x-docs-platform-checked: 2026-10-03
 tags:
 - Company
 - Marketing
