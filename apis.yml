@@ -48,7 +48,7 @@ x-tier-reason: three published API surfaces (REST, MCP, public agent endpoint) w
   and provider-published agent skills
 specificationVersion: '0.23'
 created: '2026-07-17'
-modified: '2026-09-16'
+modified: '2026-10-06'
 x-docs-platform: zudoku
 x-docs-platform-confidence: medium
 x-docs-platform-checked: 2026-10-03
@@ -167,6 +167,8 @@ maintainers:
 - FN: APIs.json
   email: info@apis.io
 common:
+- url: https://improvado.io/blog/rss.xml
+  type: BlogRSS
 - type: Website
   url: https://improvado.io
 - type: DeveloperPortal
