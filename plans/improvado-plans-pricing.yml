@@ -140,3 +140,39 @@ x-evidence:
 - fetched: '2026-08-13'
   url: https://improvado.io/llms.txt
   http_status: 200
+x-canonical:
+  generated: '2026-10-08'
+  vocabulary: all/0-working/economics/plans-canonical.yml
+  models:
+  - free
+  - subscription
+  units: []
+  plans:
+  - name: Free Limited
+    access: other
+    model: free
+    model_how: derived
+    units: []
+    periods:
+    - month
+  - name: MCP Only
+    access: other
+    model: subscription
+    model_how: derived
+    units: []
+    periods:
+    - month
+  - name: Advanced
+    access: other
+    model: unstated
+    model_how: derived
+    units: []
+    periods:
+    - month
+  - name: Enterprise
+    access: other
+    model: unstated
+    model_how: derived
+    units: []
+    periods:
+    - month
