@@ -1,0 +1,1832 @@
+openapi: 3.2.0
+info:
+  title: Improvado Embedded API v3 Recipes API
+  version: 3.0.0
+  description: 'Improvado Embedded API V3 provides programmatic access to data extraction, transformation, and loading capabilities.
+
+
+    ## Authentication
+
+
+    This API supports multiple authentication methods depending on the endpoint:
+
+
+    ### Basic Authentication
+
+    Used for workspace-agnostic operations such as:
+
+    - Creating access tokens (`POST /api/v3/token`)
+
+    - Listing workspaces (`GET /api/v3/workspaces`)
+
+    - Managing workspaces (`POST /api/v3/workspaces`, `GET /api/v3/workspaces/{id}`, `PUT /api/v3/workspaces/{id}`)
+
+    - Getting iframe URLs (`POST /api/v3/get_iframe_url`)
+
+    - Listing available recipes (`GET /api/v3/recipes/`)
+
+    etc.
+
+
+    **Format**: `Authorization: Basic `
+
+
+    ### Bearer Token Authentication
+
+    Used for workspace-scoped operations after obtaining a token from `/api/v3/token`. The token is scoped to a specific workspace.
+
+
+    **Format**: `Authorization: Bearer `
+
+
+    ### Cookie Authentication
+
+    Alternative to Bearer token for browser-based integrations. When using cookie authentication, you must include the workspace ID in the request header.
+
+
+    **Cookie**: `dts_session_id=`
+
+
+    **Required Header**: `X-IM-WORKSPACE-ID: `
+
+
+    ## Workspace Scoping
+
+
+    Most API operations are workspace-scoped. After authenticating with Basic Auth, obtain a workspace-specific token using `POST /api/v3/token` with the desired `workspace_id`. This token provides access only to resources within that workspace, ensuring isolation between different customers or projects.
+
+
+    ## Errors
+
+
+    The automated recipe operations under `/api/v3.1/automated-recipe*` and
+
+    `GET /api/v3.1/connections/{connection_id}/accounts/` return errors as
+
+    `{"code": "...", "message": "...", "details": {...}}`. Branch on `code`, never on the
+
+    message text. See Errors for the catalogue of codes and the shape of `details`.
+
+
+    All other operations return errors as `{"detail": "error description"}`.'
+servers:
+- url: https://embedded.improvado.io
+tags:
+- name: Recipes
+  x-zudoku-collapsed: true
+  description: 'Work with pre-built recipes that automate common data pipeline workflows.
+
+
+    Recipes are templated workflows that combine multiple API operations into reusable patterns.
+
+    They simplify common tasks like:
+
+    - Setting up end-to-end data pipelines (source → extract → load → destination)
+
+    - Configuring multiple related extracts at once
+
+    - Applying best-practice configurations
+
+
+    Recipes accelerate implementation by providing proven patterns for common use cases.
+
+
+    **Automated recipes have moved to v3.1.** They are documented under
+
+    Automated Recipes, which is where new integrations should start.
+
+    The `/api/v3/automated-recipe-templates/` and `/api/v3/automated-recipes/` operations in
+
+    this tag are deprecated. They keep working until they are switched off, and we will
+
+    announce the date in advance. See Moving recipes to v3.1 for what
+
+    changes between the two versions, and Deploying recipes for the current flow.
+
+
+    **Two operations in this tag are not automated recipes and are not deprecated:**
+
+    `List agency recipes` (`GET /api/v3/recipes/`) and `Enable recipe in a workspace`
+
+    (`POST /api/v3/workspaces/{id}/recipes`). They use Basic authentication, work with the
+
+    recipes available to your agency rather than with automated recipes, and have no v3.1
+
+    replacement.'
+paths:
+  /api/v3/workspaces/{id}/recipes:
+    post:
+      operationId: api_v3_workspace_enable_recipe
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl -X POST 'https://embedded.improvado.io/api/v3/workspaces/1/recipes' \\\n  -u \"$IMPROVADO_USER:$IMPROVADO_PASSWORD\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"recipe_id\": 1}'\n"
+      summary: Enable recipe in a workspace
+      description: Enables a specific recipe for a given workspace
+      parameters:
+      - in: path
+        name: id
+        description: Workspace ID
+        schema:
+          type: integer
+        required: true
+        examples:
+          workspace_enable_recipe:
+            value:
+              id: 1
+      tags:
+      - Recipes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recipe_id:
+                  type: integer
+                  description: Recipe ID
+            examples:
+              workspace_enable_recipe:
+                value:
+                  recipe_id: 1
+      responses:
+        '204':
+          description: Recipe is enabled
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_auth:
+                  value:
+                    detail: Error Message
+        '403':
+          description: Recipe pipeline is disabled for agency
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                recipe_pipeline_disabled:
+                  value:
+                    detail: Error Message
+        '404':
+          description: Workspace or Recipe Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                workspace_or_recipe_not_found:
+                  value:
+                    detail: Error Message
+      security:
+      - basicAuth: []
+  /api/v3/recipes/:
+    get:
+      operationId: api_v3_recipes_list
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl 'https://embedded.improvado.io/api/v3/recipes/' \\\n  -u \"$IMPROVADO_USER:$IMPROVADO_PASSWORD\"\n"
+      summary: List agency recipes
+      description: Get list of recipes available for agency
+      tags:
+      - Recipes
+      responses:
+        '200':
+          description: Get list of recipes available for agency
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Recipe'
+              examples:
+                recipes_list:
+                  value:
+                  - id: 1
+                    title: Recipe 1
+                  - id: 2
+                    title: Recipe 2
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_auth:
+                  value:
+                    detail: Error Message
+      security:
+      - basicAuth: []
+  /api/v3/automated-recipe-templates/:
+    get:
+      deprecated: true
+      operationId: api_v3_automated_recipe_templates_list
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl 'https://embedded.improvado.io/api/v3/automated-recipe-templates/' \\\n  -H \"Authorization: Bearer $TOKEN\"\n"
+      summary: DEPRECATED List automated recipe templates
+      description: 'Deprecated: use `GET /api/v3.1/automated-recipe-templates/`. This version stays available until it is switched off; see Moving recipes to v3.1.
+
+
+        When the recipes service fails, this version answers `500` with an HTML page, and an error in the `4xx` range can arrive with a body that is not JSON. It also repeats the request to the recipes service up to three times, create included, so a create can run twice. v3.1 does neither: every error is `{code, message, details}`, and a request is repeated only when it provably never reached the service.
+
+
+        Returns a paginated list of available automated recipe templates that can be used to create automated recipes.'
+      tags:
+      - Recipes
+      parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+        description: Page number for pagination
+        required: false
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+          default: 20
+          maximum: 100
+        description: Number of results per page (max 100)
+        required: false
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Search templates by name
+        required: false
+      - in: query
+        name: data_sources
+        schema:
+          type: string
+        description: Filter by data sources (comma-separated list, e.g., "google_analytics,facebook_ads")
+        required: false
+      responses:
+        '200':
+          description: List of automated recipe templates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAutomatedRecipeTemplateList'
+              examples:
+                templates_list:
+                  value:
+                    count: 15
+                    next: /api/v3/automated-recipe-templates/?page=2
+                    previous: null
+                    results:
+                    - id: 123
+                      title: Marketing Attribution Model
+                      description: Multi-touch attribution analysis combining GA4, Facebook Ads, and Google Ads data
+                      data_sources:
+                      - name: google_analytics
+                        title: Google Analytics
+                      - name: facebook_ads
+                        title: Facebook Ads
+                      created_at: 2024-01-15 10:30:00+00:00
+                      updated_at: 2024-02-20 14:45:00+00:00
+                    - id: 124
+                      title: E-commerce Sales Dashboard
+                      description: Comprehensive sales analytics with product performance metrics
+                      data_sources:
+                      - name: shopify
+                        title: Shopify
+                      created_at: 2024-01-20 09:15:00+00:00
+                      updated_at: 2024-02-18 11:20:00+00:00
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/automated-recipe-templates/{template_id}/:
+    get:
+      deprecated: true
+      operationId: api_v3_automated_recipe_templates_retrieve
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl 'https://embedded.improvado.io/api/v3/automated-recipe-templates/123/' \\\n  -H \"Authorization: Bearer $TOKEN\"\n"
+      summary: DEPRECATED Get automated recipe template detail
+      description: 'Deprecated: use `GET /api/v3.1/automated-recipe-templates/{template_id}/`. This version stays available until it is switched off; see Moving recipes to v3.1.
+
+
+        When the recipes service fails, this version answers `500` with an HTML page, and an error in the `4xx` range can arrive with a body that is not JSON. It also repeats the request to the recipes service up to three times, create included, so a create can run twice. v3.1 does neither: every error is `{code, message, details}`, and a request is repeated only when it provably never reached the service.
+
+
+        Returns detailed information about a specific automated recipe template, including its tree structure and dependencies.'
+      tags:
+      - Recipes
+      parameters:
+      - in: path
+        name: template_id
+        schema:
+          type: integer
+        required: true
+        description: Automated recipe template ID
+        examples:
+          template_detail:
+            value: 123
+      responses:
+        '200':
+          description: Automated recipe template details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomatedRecipeTemplateDetail'
+              examples:
+                template_detail:
+                  value:
+                    id: 123
+                    title: Marketing Attribution Model
+                    description: Multi-touch attribution analysis combining GA4, Facebook Ads, and Google Ads data
+                    data_sources:
+                    - name: google_analytics
+                      title: Google Analytics
+                    - name: facebook_ads
+                      title: Facebook Ads
+                    level: 0
+                    children:
+                    - id: 124
+                      title: GA4 Base Data
+                      level: 1
+                      parent_id: 123
+                      children: []
+                    - id: 125
+                      title: Facebook Ads Base Data
+                      level: 1
+                      parent_id: 123
+                      children: []
+                    dependencies_count: 2
+                    output_columns:
+                    - name: date
+                      type: date
+                      user_kind: date_key
+                    - name: campaign_name
+                      type: string
+                      user_kind: dimension
+                    - name: cost
+                      type: number
+                      user_kind: metric
+                    created_at: 2024-01-15 10:30:00+00:00
+                    updated_at: 2024-02-20 14:45:00+00:00
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Not found.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/automated-recipes/:
+    get:
+      deprecated: true
+      operationId: api_v3_automated_recipes_list
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl 'https://embedded.improvado.io/api/v3/automated-recipes/?state=Ready%20to%20work' \\\n  -H \"Authorization: Bearer $TOKEN\"\n"
+      summary: DEPRECATED List automated recipes
+      description: 'Deprecated: use `GET /api/v3.1/automated-recipes/`. This version stays available until it is switched off; see Moving recipes to v3.1.
+
+
+        When the recipes service fails, this version answers `500` with an HTML page, and an error in the `4xx` range can arrive with a body that is not JSON. It also repeats the request to the recipes service up to three times, create included, so a create can run twice. v3.1 does neither: every error is `{code, message, details}`, and a request is repeated only when it provably never reached the service.
+
+
+        Returns a paginated list of automated recipes in the workspace.'
+      tags:
+      - Recipes
+      parameters:
+      - in: query
+        name: template_id
+        schema:
+          type: integer
+        description: Filter by template ID
+        required: false
+      - in: query
+        name: state
+        schema:
+          type: string
+          enum:
+          - Extracting Data
+          - Building Dependencies
+          - Ready to work
+          - Failed
+        description: 'Filter by recipe state. The value is matched exactly and is case-sensitive: an unrecognized value returns 200 with an empty page rather than an error, so a filter written with different casing silently reports no recipes.
+
+          '
+        required: false
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+        description: Page number for pagination
+        required: false
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+          default: 20
+          maximum: 100
+        description: Number of results per page (max 100)
+        required: false
+      responses:
+        '200':
+          description: List of automated recipes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAutomatedRecipeList'
+              examples:
+                recipes_list:
+                  value:
+                    count: 3
+                    next: null
+                    previous: null
+                    results:
+                    - recipe_id: '12647075758935484548'
+                      template_id: 285
+                      template_title: Cross-Channel Dashboard
+                      title: Cross-Channel Automated test
+                      state: Ready to work
+                      workspace_id: 456
+                      created_at: 2025-11-17 16:09:18.754810+00:00
+                      updated_at: 2025-11-17 16:11:39.756697+00:00
+                    - recipe_id: '12647075758935484549'
+                      template_id: 285
+                      template_title: Cross-Channel Dashboard
+                      title: Cross-Channel Q2 2025
+                      state: Extracting Data
+                      workspace_id: 456
+                      created_at: 2025-04-01 09:15:00+00:00
+                      updated_at: 2025-04-02 11:20:00+00:00
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    post:
+      deprecated: true
+      operationId: api_v3_automated_recipes_create
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl -X POST 'https://embedded.improvado.io/api/v3/automated-recipes/' \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"template_id\": 123, \"title\": \"Cross-Channel\"}'\n"
+      summary: DEPRECATED Create automated recipe
+      description: 'Deprecated: use `POST /api/v3.1/automated-recipes/`. This version stays available until it is switched off; see Moving recipes to v3.1.
+
+
+        When the recipes service fails, this version answers `500` with an HTML page, and an error in the `4xx` range can arrive with a body that is not JSON. It also repeats the request to the recipes service up to three times, create included, so a create can run twice. v3.1 does neither: every error is `{code, message, details}`, and a request is repeated only when it provably never reached the service.
+
+
+        Creates an automated recipe from a template. The recipe is created **empty** - no data sources, no connections, no accounts - so the next call must be PUT /api/v3/automated-recipes/{recipe_id}/.
+
+
+        **Only one recipe per template per workspace.** A second create from the same template returns 400 with `existing_recipe_ids`; treat that as "already deployed" and reuse one of the returned recipes.
+
+
+        **The output table name is derived from the template''s title, not from `title` in this body.** `title` names the recipe in the UI and has no effect on the table. Two deployments of the same template with different titles produce the same table name. Uniqueness of that name is scoped to (agency, workspace), so the same name repeating across workspaces is expected and correct - do not try to make table names unique across your fleet. To learn the physical name, take `datatable_id` from this response and call GET /api/v3/data-tables/{data_table_id}, then read `sql_name`.'
+      tags:
+      - Recipes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - template_id
+              properties:
+                template_id:
+                  type: integer
+                  description: ID of the automated recipe template
+                title:
+                  type: string
+                  description: Recipe name. If not specified, template name is used
+            examples:
+              create_recipe:
+                value:
+                  template_id: 123
+                  title: Q1 2024 Marketing Attribution
+              create_recipe_no_title:
+                value:
+                  template_id: 123
+      responses:
+        '201':
+          description: Automated recipe created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomatedRecipeCreateResponse'
+              examples:
+                recipe_created:
+                  value:
+                    recipe_id: '12647075758935484548'
+                    template_id: 285
+                    title: Cross-Channel Automated test
+                    state: Extracting Data
+                    datatable_id: 9876543
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomatedRecipeCreateError'
+              examples:
+                template_not_found:
+                  value:
+                    detail: Template not found or not automated
+                validation_error:
+                  value:
+                    template_id:
+                    - This field is required.
+                recipe_from_template_already_exists:
+                  summary: A recipe from this template already exists in this workspace
+                  value:
+                    detail: You already have a recipe from this template in this workspace. Use update/build to change account settings, or resetup to update the recipe from the template.
+                    existing_recipe_ids:
+                    - '12647075758935484548'
+                table_name_already_used:
+                  summary: The output table name derived from the template is taken
+                  value:
+                    detail: This table name is already used. Please, change the table name
+                    conflicting_recipe_ids:
+                    - '12647075758935484549'
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_permission:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/automated-recipes/{recipe_id}/:
+    get:
+      deprecated: true
+      operationId: api_v3_automated_recipes_retrieve
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl 'https://embedded.improvado.io/api/v3/automated-recipes/12647075758935484548/' \\\n  -H \"Authorization: Bearer $TOKEN\"\n"
+      summary: DEPRECATED Get automated recipe detail
+      description: 'Deprecated: use `GET /api/v3.1/automated-recipes/{recipe_id}/`. This version stays available until it is switched off; see Moving recipes to v3.1.
+
+
+        When the recipes service fails, this version answers `500` with an HTML page, and an error in the `4xx` range can arrive with a body that is not JSON. It also repeats the request to the recipes service up to three times, create included, so a create can run twice. v3.1 does neither: every error is `{code, message, details}`, and a request is repeated only when it provably never reached the service.
+
+
+        Returns detailed information about a specific automated recipe, including its configuration and connections.'
+      tags:
+      - Recipes
+      parameters:
+      - in: path
+        name: recipe_id
+        schema:
+          type: string
+        required: true
+        description: Automated recipe ID (numeric string)
+        examples:
+          recipe_detail:
+            value: '12647075758935484548'
+      responses:
+        '200':
+          description: Automated recipe details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomatedRecipeDetail'
+              examples:
+                recipe_ready:
+                  value:
+                    recipe_id: '12647075758935484548'
+                    template_id: 285
+                    datatable_id: 456
+                    title: Cross-Channel Automated test
+                    state: Ready to work
+                    data_sources:
+                    - facebook
+                    - google_ads_ql
+                    allowed_data_sources:
+                    - facebook
+                    - facebook_pages
+                    - google_ads_ql
+                    - google_dbm
+                    - twitter
+                    - bing
+                    - linkedin_ads
+                    - tiktok_ads
+                    connections:
+                    - connection_id: 1039
+                      connection_data_source: google_ads_ql
+                      accounts:
+                      - id: 301010
+                        account_id: '2279787570'
+                    - connection_id: 2838
+                      connection_data_source: facebook
+                      accounts:
+                      - id: 67133
+                        account_id: act_500105056677763
+                    sync_from_date: 2025-10-18
+                    last_build_at: 2025-11-17 16:12:33.721081+00:00
+                    error: null
+                    created_at: 2025-11-17 16:09:18.754810+00:00
+                    updated_at: 2025-11-17 16:11:39.756697+00:00
+                recipe_extracting:
+                  value:
+                    recipe_id: '12647075758935484548'
+                    template_id: 285
+                    datatable_id: null
+                    title: Cross-Channel Automated test
+                    state: Extracting Data
+                    data_sources:
+                    - facebook
+                    - google_ads_ql
+                    allowed_data_sources:
+                    - facebook
+                    - facebook_pages
+                    - google_ads_ql
+                    - google_dbm
+                    - twitter
+                    - bing
+                    - linkedin_ads
+                    - tiktok_ads
+                    connections:
+                    - connection_id: 1039
+                      connection_data_source: google_ads_ql
+                      accounts:
+                      - id: 301010
+                        account_id: '2279787570'
+                    sync_from_date: 2025-10-18
+                    last_build_at: 2025-11-17 16:12:33.721081+00:00
+                    error: null
+                    created_at: 2025-11-17 16:09:18.754810+00:00
+                    updated_at: 2025-11-17 16:11:39.756697+00:00
+                recipe_failed:
+                  summary: A build that failed, with the reason
+                  value:
+                    recipe_id: '12647075758935484548'
+                    template_id: 285
+                    datatable_id: null
+                    title: Cross-Channel Automated test
+                    state: Failed
+                    data_sources:
+                    - facebook
+                    allowed_data_sources:
+                    - facebook
+                    - google_ads_ql
+                    connections:
+                    - connection_id: 2838
+                      connection_data_source: facebook
+                      accounts:
+                      - id: 67133
+                        account_id: act_500105056677763
+                    sync_from_date: 2025-10-18
+                    last_build_at: 2025-11-17 16:12:33.721081+00:00
+                    error:
+                      message: This table name is already used. Please, change the table name
+                      stage: final_build
+                      data_source: null
+                    created_at: 2025-11-17 16:09:18.754810+00:00
+                    updated_at: 2025-11-17 16:11:39.756697+00:00
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Not found.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    put:
+      deprecated: true
+      operationId: api_v3_automated_recipes_update
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl -X PUT 'https://embedded.improvado.io/api/v3/automated-recipes/12647075758935484548/' \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n        \"data_sources\": [\"facebook\"],\n        \"connections\": [\n          {\n            \"connection_id\": 69909,\n            \"connection_data_source\": \"facebook\",\n            \"accounts\": [{\"id\": 3559308, \"account_id\": \"act_750501968745425\"}]\n          }\n        ],\n        \"sync_from_date\": \"2026-01-01\"\n      }'\n"
+      summary: DEPRECATED Update automated recipe configuration
+      description: 'Deprecated: use `PUT /api/v3.1/automated-recipes/{recipe_id}/`. This version stays available until it is switched off; see Moving recipes to v3.1.
+
+
+        When the recipes service fails, this version answers `500` with an HTML page, and an error in the `4xx` range can arrive with a body that is not JSON. It also repeats the request to the recipes service up to three times, create included, so a create can run twice. v3.1 does neither: every error is `{code, message, details}`, and a request is repeated only when it provably never reached the service.
+
+
+        Supplies the configuration of an automated recipe: data sources, connections and accounts. A recipe created by POST is empty, so this call is a required step of every deployment, not an optional edit.
+
+
+        **The payload is the complete configuration, and it is append-only.** Send every data source, every connection and every account the recipe should have, including the ones it already has. Sending a delta fails: removing a data source, a connection or an account that is already configured returns 400 and nothing is saved. There is no way to remove an account, a connection or a data source from a recipe through this call. If the set has to shrink, delete the recipe with DELETE /api/v3/automated-recipes/{recipe_id}/ and deploy it again from the same template.
+
+
+        Returns 200 with an empty body. Read the recipe back with GET /api/v3/automated-recipes/{recipe_id}/ to confirm what was stored.'
+      tags:
+      - Recipes
+      parameters:
+      - in: path
+        name: recipe_id
+        schema:
+          type: string
+        required: true
+        description: Automated recipe ID (numeric string)
+        examples:
+          recipe_update:
+            value: '12647075758935484548'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutomatedRecipeUpdateRequest'
+            examples:
+              update_recipe:
+                value:
+                  data_sources:
+                  - google_analytics
+                  - facebook_ads
+                  connections:
+                  - connection_id: 789
+                    connection_data_source: google_analytics
+                    accounts:
+                    - id: 1
+                      account_id: UA-12345678-1
+                  sync_from_date: 2024-01-01
+      responses:
+        '200':
+          description: Recipe configuration updated successfully (empty body)
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validation_error:
+                  value:
+                    data_sources:
+                    - This field is required.
+                    connections:
+                    - This field is required.
+                invalid_data_source:
+                  value:
+                    data_sources:
+                    - 'Data sources not allowed for this recipe: invalid_source'
+                accounts_not_objects:
+                  summary: accounts[] items must be objects, not bare identifiers
+                  value:
+                    connections:
+                    - accounts:
+                      - non_field_errors:
+                        - Invalid data. Expected a dictionary, but got str.
+                data_source_removed:
+                  summary: A configured data source is missing from the payload
+                  value:
+                    data_sources:
+                    - 'Cannot remove existing data sources: facebook. You can only add new data sources.'
+                connection_removed:
+                  summary: A configured connection is missing from the payload
+                  value:
+                    connections:
+                    - 'Cannot remove existing connections: (connection_id=1039, data_source="google_ads_ql"). You can only add new connections.'
+                account_removed:
+                  summary: A configured account is missing from the payload
+                  value:
+                    connections:
+                    - Cannot remove accounts [301010] from connection (connection_id=1039, data_source="google_ads_ql"). You can only add new accounts.
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Not found.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    delete:
+      deprecated: true
+      operationId: api_v3_automated_recipes_destroy
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl -X DELETE 'https://embedded.improvado.io/api/v3/automated-recipes/12647075758935484548/' \\\n  -H \"Authorization: Bearer $TOKEN\"\n"
+      summary: DEPRECATED Delete automated recipe
+      description: 'Deprecated: use `DELETE /api/v3.1/automated-recipes/{recipe_id}/`. This version stays available until it is switched off; see Moving recipes to v3.1.
+
+
+        When the recipes service fails, this version answers `500` with an HTML page, and an error in the `4xx` range can arrive with a body that is not JSON. It also repeats the request to the recipes service up to three times, create included, so a create can run twice. v3.1 does neither: every error is `{code, message, details}`, and a request is repeated only when it provably never reached the service.
+
+
+        Permanently deletes an automated recipe. This is a hard delete and it cannot be undone: the SQL views the recipe produced are dropped, its cells and configuration are removed, the data tables it created in the workspace are cleaned up, and the intermediate recipes it was built on are deleted with it.
+
+
+        The cascade follows the recipes this one reads from, not the ones that read it: a recipe built on top of this one is left in place and will break, and an intermediate recipe that another deployed recipe also reads is deleted just the same.
+
+
+        Deleting frees the template slot. One recipe per template per workspace is enforced on create, so after a delete the same template can be deployed again - which is how a failed deployment is retired, and how a recipe whose account set has to shrink is replaced, since configuration is append-only.
+
+
+        Returns 204 with an empty body. The 204 says the deletion was attempted, not that every recipe in the tree went away: they are deleted one by one and a per-recipe failure is logged rather than reported here. Before deploying the same template again, confirm with GET /api/v3/automated-recipes/?template_id= that nothing is left.'
+      tags:
+      - Recipes
+      parameters:
+      - in: path
+        name: recipe_id
+        schema:
+          type: string
+        required: true
+        description: Automated recipe ID (numeric string)
+        examples:
+          recipe_delete:
+            value: '12647075758935484548'
+      responses:
+        '204':
+          description: Recipe deleted (empty body)
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_active_destination:
+                  summary: The workspace has no active destination to clean up
+                  value:
+                    detail: 'No active destination for agency: 11260.'
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '403':
+          description: 'The embedded API is not enabled for this agency, or the recipe belongs to another workspace, or to another agency. The three answer with different `detail` strings.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                embedded_not_enabled:
+                  summary: The embedded API is not enabled for this agency
+                  value:
+                    detail: You do not have permission to perform this action.
+                wrong_workspace:
+                  summary: The recipe is not in the workspace of the request
+                  value:
+                    detail: You do not have permission to read this notebook. Please contract your workspace owner.
+                wrong_agency:
+                  summary: The recipe belongs to another agency
+                  value:
+                    detail: You do not have permission to edit this notebook. Please contract your workspace owner.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Not found.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/automated-recipes/{recipe_id}/build/:
+    post:
+      deprecated: true
+      operationId: api_v3_automated_recipes_build
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl -X POST 'https://embedded.improvado.io/api/v3/automated-recipes/12647075758935484548/build/' \\\n  -H \"Authorization: Bearer $TOKEN\"\n"
+      summary: DEPRECATED Build automated recipe
+      description: 'Deprecated: use `POST /api/v3.1/automated-recipes/{recipe_id}/build/`. This version stays available until it is switched off; see Moving recipes to v3.1.
+
+
+        When the recipes service fails, this version answers `500` with an HTML page, and an error in the `4xx` range can arrive with a body that is not JSON. It also repeats the request to the recipes service up to three times, create included, so a create can run twice. v3.1 does neither: every error is `{code, message, details}`, and a request is repeated only when it provably never reached the service.
+
+
+        Triggers the build process for an automated recipe. The recipe will transition through states (Extracting Data -> Building Dependencies -> Ready to work or Failed).
+
+
+        A 200 confirms that the build was started, not that it will succeed. The output table name is checked again for every table the recipe creates, immediately before each one is created, so a name that was free at start can be taken by the time the build reaches it. Such a failure arrives asynchronously: the recipe moves to `Failed` and the reason is in the `error` field of GET /api/v3/automated-recipes/{recipe_id}/.
+
+
+        The build waits for the extractions of the recipe and turns `Ready to work` on the ones that delivered. An extraction counts as delivered once one of its runs has completed, while the historical backfill may still be loading. Extractions that cannot deliver on their own - paused, or reused by a rebuild with nothing running - are not waited for, and the others only up to a limit; the ones left out can be missing from the output. A build with nothing to build from - no extraction delivered, or none for one extract template - fails.'
+      tags:
+      - Recipes
+      parameters:
+      - in: path
+        name: recipe_id
+        schema:
+          type: string
+        required: true
+        description: Automated recipe ID (numeric string)
+        examples:
+          build_recipe:
+            value: '12647075758935484548'
+      responses:
+        '200':
+          description: Build started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomatedRecipeBuildResponse'
+              examples:
+                build_started:
+                  value:
+                    status: building
+                    message: Build started successfully
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomatedRecipeBuildResponse'
+              examples:
+                already_building:
+                  value:
+                    status: error
+                    message: Build is already in progress
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Not found.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/automated-recipes/{recipe_id}/extractions/:
+    get:
+      deprecated: true
+      operationId: api_v3_automated_recipes_extractions
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl 'https://embedded.improvado.io/api/v3/automated-recipes/12647075758935484548/extractions/' \\\n  -H \"Authorization: Bearer $TOKEN\"\n"
+      summary: DEPRECATED Check the extraction tables a recipe reads
+      description: 'Deprecated: use `GET /api/v3.1/automated-recipes/{recipe_id}/extractions/`. This version stays available until it is switched off; see Moving recipes to v3.1.
+
+
+        When the recipes service fails, this version answers `500` with an HTML page, and an error in the `4xx` range can arrive with a body that is not JSON. It also repeats the request to the recipes service up to three times, create included, so a create can run twice. v3.1 does neither: every error is `{code, message, details}`, and a request is repeated only when it provably never reached the service.
+
+
+        Reports the extraction tables the recipe reads and whether each one already exists in the workspace destination. Use it to decide when a build that failed for missing data is worth repeating: once every `table_exists` is true, the build can be started again.
+
+
+        The tables come from the cells of the recipe and of the intermediate recipes it is built on, narrowed to the selected data sources. The extraction ids are the ones the last build used - created or reused - so they are empty before the first build. Nothing here is cached - every call queries the destination once.
+
+
+        `ready` is true when every listed table exists. A recipe whose cells reference no extraction tables answers with `ready: false` and an empty `sources` list. A table exists once the first account''s rows land in it, so `ready` does not mean that every account has delivered, and it can be true while the recipe is still `Extracting Data`; the recipe `state` is the readiness signal.'
+      tags:
+      - Recipes
+      parameters:
+      - in: path
+        name: recipe_id
+        schema:
+          type: string
+        required: true
+        description: Automated recipe ID (numeric string)
+        examples:
+          recipe_extractions:
+            value: '12647075758935484548'
+      responses:
+        '200':
+          description: The extraction tables the recipe reads
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomatedRecipeExtractions'
+              examples:
+                partially_ready:
+                  summary: One source has landed, the other has not
+                  value:
+                    ready: false
+                    sources:
+                    - data_source: facebook
+                      table: ads_5972_facebook_all_data
+                      table_exists: false
+                      extraction_ids:
+                      - 21996
+                    - data_source: google_ads
+                      table: ads_6013_google_ads_all_data
+                      table_exists: true
+                      extraction_ids:
+                      - 22014
+                no_extraction_tables:
+                  summary: The recipe reads no extraction tables
+                  value:
+                    ready: false
+                    sources: []
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '403':
+          description: 'The embedded API is not enabled for this agency, or the recipe belongs to another workspace, or to another agency. The three answer with different `detail` strings.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                embedded_not_enabled:
+                  summary: The embedded API is not enabled for this agency
+                  value:
+                    detail: You do not have permission to perform this action.
+                wrong_workspace:
+                  summary: The recipe is not in the workspace of the request
+                  value:
+                    detail: You do not have permission to read this notebook. Please contract your workspace owner.
+                wrong_agency:
+                  summary: The recipe belongs to another agency
+                  value:
+                    detail: You do not have permission to edit this notebook. Please contract your workspace owner.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Not found.
+        '501':
+          description: 'The workspace destination does not support checking whether a table exists.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unsupported_destination:
+                  value:
+                    detail: This destination does not support checking whether the tables exist.
+        '503':
+          description: 'The destination could not be queried, or the workspace has no active destination. A failure is never reported as `table_exists: false`.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                destination_unavailable:
+                  value:
+                    detail: The destination could not be queried right now.
+                no_destination:
+                  value:
+                    detail: The destination of this workspace is not available.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/automated-recipes/{recipe_id}/resetup/:
+    post:
+      deprecated: true
+      operationId: api_v3_automated_recipes_resetup
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl -X POST 'https://embedded.improvado.io/api/v3/automated-recipes/12647075758935484548/resetup/' \\\n  -H \"Authorization: Bearer $TOKEN\"\n"
+      summary: DEPRECATED Reset an automated recipe from its template
+      description: 'Deprecated: use `POST /api/v3.1/automated-recipes/{recipe_id}/resetup/`. This version stays available until it is switched off; see Moving recipes to v3.1.
+
+
+        When the recipes service fails, this version answers `500` with an HTML page, and an error in the `4xx` range can arrive with a body that is not JSON. It also repeats the request to the recipes service up to three times, create included, so a create can run twice. v3.1 does neither: every error is `{code, message, details}`, and a request is repeated only when it provably never reached the service.
+
+
+        Rebuilds the recipe from the template it was created from, and starts the build. Every recipe in the dependency tree is snapshotted first, then their cells are dropped and recreated from the current template.
+
+
+        This is how a fix made to a template reaches the recipes already deployed from it. The existing configuration - data sources, connections, accounts, sync_from_date - is preserved, and unlike a configuration PUT the build does not have to be triggered separately afterwards.
+
+
+        Takes no request body. A 200 means the reset was accepted and the build was started, not that the build will succeed - as with POST /build/, a failure arrives asynchronously in the `error` field of the recipe detail.'
+      tags:
+      - Recipes
+      parameters:
+      - in: path
+        name: recipe_id
+        schema:
+          type: string
+        required: true
+        description: Automated recipe ID (numeric string)
+        examples:
+          recipe_resetup:
+            value: '12647075758935484548'
+      responses:
+        '200':
+          description: Recipe reset from its template and the build started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomatedRecipeResetupResponse'
+              examples:
+                reset:
+                  value:
+                    status: reset
+                    recipe_id: '12647075758935484548'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                duplicate_table_name:
+                  summary: The output table name is taken by another recipe
+                  value:
+                    detail: This table name is already used. Please, change the table name
+                build_in_progress:
+                  summary: A build is already running for this recipe
+                  value:
+                    detail: Workflow already started
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '403':
+          description: 'The embedded API is not enabled for this agency, or the recipe belongs to another workspace, or to another agency. The three answer with different `detail` strings.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                embedded_not_enabled:
+                  summary: The embedded API is not enabled for this agency
+                  value:
+                    detail: You do not have permission to perform this action.
+                wrong_workspace:
+                  summary: The recipe is not in the workspace of the request
+                  value:
+                    detail: You do not have permission to read this notebook. Please contract your workspace owner.
+                wrong_agency:
+                  summary: The recipe belongs to another agency
+                  value:
+                    detail: You do not have permission to edit this notebook. Please contract your workspace owner.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Not found.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+components:
+  schemas:
+    AutomatedRecipeUpdateRequest:
+      type: object
+      description: Request body for updating automated recipe configuration
+      required:
+      - data_sources
+      - connections
+      properties:
+        data_sources:
+          type: array
+          minItems: 1
+          items:
+            type: string
+          description: List of data source names to include
+        connections:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/AutomatedRecipeConnection'
+          description: List of connections with accounts
+        sync_from_date:
+          type: string
+          format: date
+          description: Start date for data synchronization (YYYY-MM-DD)
+    AutomatedRecipeDetail:
+      type: object
+      description: Detailed automated recipe with full configuration
+      properties:
+        recipe_id:
+          type: string
+          description: Unique recipe identifier (numeric string)
+        template_id:
+          type: integer
+          description: ID of the template this recipe was created from
+        datatable_id:
+          type:
+          - integer
+          - 'null'
+          description: Associated data table ID (null if not yet created)
+        title:
+          type: string
+          description: Recipe title
+        state:
+          type: string
+          enum:
+          - Extracting Data
+          - Building Dependencies
+          - Ready to work
+          - Failed
+          description: 'Current recipe state. `Ready to work` means the last build was built on the extractions that delivered; extractions that could not deliver on their own or in time were left out, so rows of some accounts can be missing. See Build automated recipe.
+
+            '
+        data_sources:
+          type: array
+          items:
+            type: string
+          description: List of configured data source names
+        allowed_data_sources:
+          type: array
+          items:
+            type: string
+          description: List of allowed data source names for this recipe
+        connections:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomatedRecipeConnection'
+          description: List of configured connections
+        sync_from_date:
+          type:
+          - string
+          - 'null'
+          format: date
+          description: Start date for data synchronization
+        last_build_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: 'Last time the recipe''s setup row changed. Despite the name it is not a build stamp: it moves when the configuration is written and on most build state transitions, but not when POST /build/ is accepted and not when a build failure is recorded. Do not use it to decide whether, or when, a build ran.
+
+            '
+        error:
+          $ref: '#/components/schemas/AutomatedRecipeBuildError'
+        created_at:
+          type: string
+          format: date-time
+          description: Recipe creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Recipe last update timestamp
+    AutomatedRecipeResetupResponse:
+      type: object
+      description: Response from a reset operation
+      properties:
+        status:
+          type: string
+          enum:
+          - reset
+          description: Reset operation status
+        recipe_id:
+          type: string
+          description: ID of the recipe that was reset
+    PaginatedAutomatedRecipeList:
+      type: object
+      description: Paginated list of automated recipes
+      properties:
+        count:
+          type: integer
+          description: Total number of recipes
+        next:
+          type:
+          - string
+          - 'null'
+          description: URL to the next page
+        previous:
+          type:
+          - string
+          - 'null'
+          description: URL to the previous page
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomatedRecipe'
+    AutomatedRecipeSourceExtractions:
+      type: object
+      description: One extraction table an automated recipe reads, and the data source it comes from
+      properties:
+        data_source:
+          type: string
+          description: Data source name, e.g. `facebook`
+        table:
+          type: string
+          description: Name of the extraction table in the workspace destination
+        table_exists:
+          type: boolean
+          description: Whether that table exists in the destination right now
+        extraction_ids:
+          type: array
+          description: 'Extractions the last build used for this data source - the ones it created and the existing ones it reused, including any it did not wait for. Repeated on every table of the same data source, and empty before the first build.
+
+            '
+          items:
+            type: integer
+    AutomatedRecipeBuildError:
+      type:
+      - object
+      - 'null'
+      description: 'Why the last build failed. `null` unless the most recent build failed - the field is cleared when the configuration is written, when a build starts and when a build succeeds. This is the only machine-readable place the failure reason appears: POST /build/ has already returned by the time a build fails.
+
+        '
+      properties:
+        message:
+          type: string
+          description: Human-readable reason, stripped of internal identifiers
+        stage:
+          type:
+          - string
+          - 'null'
+          enum:
+          - extraction
+          - transformation_build
+          - final_build
+          - null
+          description: Which phase of the build failed. Null on failures recorded without a stage.
+        data_source:
+          type:
+          - string
+          - 'null'
+          description: Always null today - the public error carries no build context. Reserved.
+    AutomatedRecipeExtractions:
+      type: object
+      description: The extraction tables an automated recipe reads, and whether they exist yet
+      properties:
+        ready:
+          type: boolean
+          description: 'True when every table in `sources` exists in the destination. Not a sign that every account has delivered - see the recipe `state`.
+
+            '
+        sources:
+          type: array
+          description: 'One entry per extraction table the recipe reads, sorted by table name. A data source with more than one table appears once per table, so `data_source` is not unique - key this list by `table`. Empty when the recipe''s cells reference no extraction tables.
+
+            '
+          items:
+            $ref: '#/components/schemas/AutomatedRecipeSourceExtractions'
+    AutomatedRecipeCreateResponse:
+      type: object
+      description: Response after creating an automated recipe
+      properties:
+        recipe_id:
+          type: string
+          description: Unique recipe identifier (numeric string)
+        template_id:
+          type: integer
+          description: ID of the template this recipe was created from
+        title:
+          type: string
+          description: Recipe title
+        state:
+          type: string
+          enum:
+          - Extracting Data
+          - Building Dependencies
+          - Ready to work
+          - Failed
+          description: 'Initial recipe state, always "Extracting Data". It is the model default written at creation and does not mean that anything is configured or running yet.
+
+            '
+        datatable_id:
+          type:
+          - integer
+          - 'null'
+          description: 'ID of the output data table. Resolve the physical table name with GET /api/v3/data-tables/{data_table_id} rather than deriving it from the recipe title.
+
+            '
+    ErrorResponse:
+      type: object
+      description: Error response object
+      properties:
+        detail:
+          type: string
+          description: Error message
+      examples:
+      - no_auth:
+          value:
+            detail: You do not have permission to perform this action.
+      - invalid_request:
+          value:
+            detail: Invalid request
+      - not_uniq_name:
+          value:
+            detail: Workspace with this title already exists
+    AutomatedRecipeTemplate:
+      type: object
+      description: Automated recipe template object
+      properties:
+        id:
+          type: integer
+          description: Template ID
+        title:
+          type: string
+          description: Template title
+        description:
+          type: string
+          description: Template description
+        data_sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomatedRecipeTemplateDataSource'
+          description: List of data sources used by this template
+        created_at:
+          type: string
+          format: date-time
+          description: Template creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Template last update timestamp
+    AutomatedRecipe:
+      type: object
+      description: Automated recipe object
+      properties:
+        recipe_id:
+          type: string
+          description: Unique recipe identifier (numeric string)
+        template_id:
+          type: integer
+          description: ID of the template this recipe was created from
+        template_title:
+          type: string
+          description: Title of the source template
+        title:
+          type: string
+          description: Recipe title
+        state:
+          type: string
+          enum:
+          - Extracting Data
+          - Building Dependencies
+          - Ready to work
+          - Failed
+          description: 'Current recipe state. `Ready to work` means the last build was built on the extractions that delivered; extractions that could not deliver on their own or in time were left out, so rows of some accounts can be missing. See Build automated recipe.
+
+            '
+        workspace_id:
+          type: integer
+          description: Workspace ID
+        created_at:
+          type: string
+          format: date-time
+          description: Recipe creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Recipe last update timestamp
+    AutomatedRecipeTemplateOutputColumn:
+      type: object
+      description: One column of the table this template produces.
+      properties:
+        name:
+          type: string
+          description: Column name in the output table
+        type:
+          type: string
+          enum:
+          - string
+          - number
+          - bool
+          - date
+          - datetime
+          description: Physical column type
+        user_kind:
+          type: string
+          enum:
+          - dimension
+          - metric
+          - date_key
+          description: 'How the column is used in reporting. Derived from `type`: string and datetime are dimensions, number and bool are metrics, date is the date key.
+
+            '
+    Recipe:
+      type: object
+      description: Recipe object
+      properties:
+        id:
+          type: integer
+          description: Recipe ID
+        title:
+          type: string
+          description: Recipe title
+      examples:
+      - recipe:
+          value:
+            id: 1
+            title: Recipe 1
+    AutomatedRecipeTemplateDetail:
+      type: object
+      description: Detailed automated recipe template with tree structure
+      properties:
+        id:
+          type: integer
+          description: Template ID
+        title:
+          type: string
+          description: Template title
+        description:
+          type: string
+          description: Template description
+        data_sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomatedRecipeTemplateDataSource'
+          description: List of data sources used by this template
+        level:
+          type: integer
+          description: Depth of this template in its own tree; 0 for a template you can deploy
+        children:
+          type: array
+          description: 'Templates this one depends on, nested recursively. A recipe created from this template builds every node in the tree.
+
+            '
+          items:
+            $ref: '#/components/schemas/AutomatedRecipeTemplateTreeNode'
+        output_columns:
+          type:
+          - array
+          - 'null'
+          description: 'Schema of the table this template produces, available before you deploy anything. `null` when the template''s output schema cannot be read - treat it as "unknown", not as "no columns".
+
+            '
+          items:
+            $ref: '#/components/schemas/AutomatedRecipeTemplateOutputColumn'
+        dependencies_count:
+          type: integer
+          description: Number of dependencies in the template
+        created_at:
+          type: string
+          format: date-time
+          description: Template creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Template last update timestamp
+    AutomatedRecipeTemplateDataSource:
+      type: object
+      description: Data source reference in automated recipe template
+      properties:
+        name:
+          type: string
+          description: Data source identifier
+        title:
+          type: string
+          description: Data source display name
+    PaginatedAutomatedRecipeTemplateList:
+      type: object
+      description: Paginated list of automated recipe templates
+      properties:
+        count:
+          type: integer
+          description: Total number of templates
+        next:
+          type:
+          - string
+          - 'null'
+          description: URL to the next page
+        previous:
+          type:
+          - string
+          - 'null'
+          description: URL to the previous page
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomatedRecipeTemplate'
+    AutomatedRecipeCreateError:
+      type: object
+      description: 'Error response of Create automated recipe. Besides `detail`, two of the failure modes return the identifiers of the objects that already hold the slot.
+
+        '
+      properties:
+        detail:
+          type: string
+          description: Error message
+        existing_recipe_ids:
+          type: array
+          description: 'Present when a recipe from the same template already exists in this workspace (one recipe per template per workspace). Lists the recipes that already exist - the list can hold more than one id. Treat this response as "already deployed" rather than as a failure, and reuse one of the returned recipes. The `detail` advises calling `resetup`: that is POST /api/v3/automated-recipes/{recipe_id}/resetup/, which recreates one of these recipes from the current version of the template.
+
+            '
+          items:
+            type: string
+        conflicting_recipe_ids:
+          type: array
+          description: 'Present when the output table name derived from the template is already taken in this workspace. Lists the recipes holding that name.
+
+            '
+          items:
+            type: string
+    AutomatedRecipeConnectionAccount:
+      type: object
+      description: 'One ad account inside a connection. Note that `id` is Improvado''s internal account id and is scoped to the workspace - it is not the account id of the advertising platform.
+
+        '
+      required:
+      - id
+      properties:
+        id:
+          type: integer
+          minimum: 1
+          description: 'Internal account id, required. Resolve it per workspace with GET /api/v3/connections/{connection_id}/accounts - the same platform account has a different `id` in every workspace. In a request body this must be an object member - sending a bare string in place of the object returns 400 "Invalid data. Expected a dictionary, but got str."
+
+            '
+        account_id:
+          type: string
+          description: 'External account identifier as the platform knows it, for example "act_500105056677763". Optional, and the only identifier that is stable across workspaces - join on it when you deploy one template to many workspaces.
+
+            '
+    AutomatedRecipeConnection:
+      type: object
+      description: Connection configuration for automated recipe
+      required:
+      - connection_id
+      - connection_data_source
+      - accounts
+      properties:
+        connection_id:
+          type: integer
+          minimum: 1
+          description: 'Connection id, scoped to the workspace. The same connector has a different `connection_id` in every workspace - resolve it per workspace with GET /api/v3/datasources/{datasource_name}/connections.
+
+            '
+        connection_data_source:
+          type: string
+          description: Data source name for this connection
+        accounts:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/AutomatedRecipeConnectionAccount'
+          description: List of accounts for this connection. Must not be empty.
+    AutomatedRecipeTemplateTreeNode:
+      type: object
+      description: 'A template in the dependency tree. The detail response is itself the root node: it carries `level` and `children` directly rather than nesting them under a wrapper.
+
+        '
+      properties:
+        id:
+          type: integer
+          description: Template ID
+        title:
+          type: string
+          description: Template title
+        level:
+          type: integer
+          description: Depth in the tree, 0 for the template you requested
+        parent_id:
+          type: integer
+          description: 'Parent template ID. Present on every node inside `children`; the root object of the detail response carries no `parent_id` key at all.
+
+            '
+        children:
+          type: array
+          description: Direct children of this node, nested recursively to any depth
+          items:
+            $ref: '#/components/schemas/AutomatedRecipeTemplateTreeNode'
+    AutomatedRecipeBuildResponse:
+      type: object
+      description: Response from build operation
+      properties:
+        status:
+          type: string
+          enum:
+          - building
+          - error
+          description: Build operation status
+        message:
+          type: string
+          description: Human-readable status message
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    tokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Bearer
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: dts_session_id
+      description: Cookie authentication. When using this method, the HTTP_X_IM_WORKSPACE_ID header must be included with the workspace_id (integer) value.

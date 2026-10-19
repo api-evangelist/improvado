@@ -1,0 +1,450 @@
+openapi: 3.2.0
+info:
+  title: Improvado Embedded API v3 Workspaces API
+  version: 3.0.0
+  description: 'Improvado Embedded API V3 provides programmatic access to data extraction, transformation, and loading capabilities.
+
+
+    ## Authentication
+
+
+    This API supports multiple authentication methods depending on the endpoint:
+
+
+    ### Basic Authentication
+
+    Used for workspace-agnostic operations such as:
+
+    - Creating access tokens (`POST /api/v3/token`)
+
+    - Listing workspaces (`GET /api/v3/workspaces`)
+
+    - Managing workspaces (`POST /api/v3/workspaces`, `GET /api/v3/workspaces/{id}`, `PUT /api/v3/workspaces/{id}`)
+
+    - Getting iframe URLs (`POST /api/v3/get_iframe_url`)
+
+    - Listing available recipes (`GET /api/v3/recipes/`)
+
+    etc.
+
+
+    **Format**: `Authorization: Basic `
+
+
+    ### Bearer Token Authentication
+
+    Used for workspace-scoped operations after obtaining a token from `/api/v3/token`. The token is scoped to a specific workspace.
+
+
+    **Format**: `Authorization: Bearer `
+
+
+    ### Cookie Authentication
+
+    Alternative to Bearer token for browser-based integrations. When using cookie authentication, you must include the workspace ID in the request header.
+
+
+    **Cookie**: `dts_session_id=`
+
+
+    **Required Header**: `X-IM-WORKSPACE-ID: `
+
+
+    ## Workspace Scoping
+
+
+    Most API operations are workspace-scoped. After authenticating with Basic Auth, obtain a workspace-specific token using `POST /api/v3/token` with the desired `workspace_id`. This token provides access only to resources within that workspace, ensuring isolation between different customers or projects.
+
+
+    ## Errors
+
+
+    The automated recipe operations under `/api/v3.1/automated-recipe*` and
+
+    `GET /api/v3.1/connections/{connection_id}/accounts/` return errors as
+
+    `{"code": "...", "message": "...", "details": {...}}`. Branch on `code`, never on the
+
+    message text. See Errors for the catalogue of codes and the shape of `details`.
+
+
+    All other operations return errors as `{"detail": "error description"}`.'
+servers:
+- url: https://embedded.improvado.io
+tags:
+- name: Workspaces
+  x-zudoku-collapsed: true
+  description: 'Manage workspaces that provide isolated environments for organizing resources.
+
+
+    Workspaces are fundamental to multi-tenancy in Improvado''s Embedded API. Each workspace provides complete
+
+    isolation of resources including connections, extracts, data tables, and loads.
+
+
+    Use workspaces to:
+
+    - Separate resources for different customers or projects
+
+    - Maintain data isolation and security boundaries
+
+    - Control access through workspace-scoped tokens
+
+    - Organize resources by environment (dev, staging, production)
+
+
+    **Important**: Access tokens are scoped to a specific workspace. A token for one workspace cannot access
+
+    resources in another workspace, ensuring strict isolation between tenants.'
+paths:
+  /api/v3/workspaces:
+    get:
+      operationId: api_v3_workspaces_list
+      summary: List workspaces
+      description: Get a list of workspaces
+      tags:
+      - Workspaces
+      responses:
+        '200':
+          description: Get a list of Workspaces
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWorkspaceList'
+              examples:
+                workspaces_list:
+                  value:
+                    count: 2
+                    next: null
+                    previous: null
+                    results:
+                    - id: 1
+                      title: Workspace 1
+                    - id: 2
+                      title: Workspace 2
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - basicAuth: []
+    post:
+      operationId: api_v3_workspaces_create
+      summary: Create a workspace
+      tags:
+      - Workspaces
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: Workspace title
+            examples:
+              workspace_create:
+                value:
+                  title: Workspace 1
+      responses:
+        '201':
+          description: Create a Workspace
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+              examples:
+                workspace_create:
+                  value:
+                    id: 1
+                    title: Workspace 1
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - basicAuth: []
+  /api/v3/workspaces/{id}:
+    get:
+      operationId: api_v3_workspaces_retrieve
+      summary: Get a workspace
+      parameters:
+      - in: path
+        name: id
+        description: Workspace ID
+        schema:
+          type: integer
+        required: true
+        examples:
+          workspace_retrieve:
+            value:
+              id: 1
+      tags:
+      - Workspaces
+      responses:
+        '200':
+          description: Get a Workspace
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+              examples:
+                workspace_retrieve:
+                  value:
+                    id: 1
+                    title: Workspace 1
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - basicAuth: []
+    put:
+      operationId: api_v3_workspaces_update
+      summary: Update a workspace
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Workspace ID
+        examples:
+          workspace_update:
+            value: 1
+          missing_title:
+            value: 1
+          not_uniq_name:
+            value: 1
+      tags:
+      - Workspaces
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: Workspace title
+            examples:
+              workspace_update:
+                value:
+                  title: Workspace 1
+              missing_title:
+                value:
+                  wrong_field: Workspace 1
+              not_uniq_name:
+                value:
+                  title: Workspace 1
+      responses:
+        '200':
+          description: Update a Workspace
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+              examples:
+                workspace_update:
+                  value:
+                    id: 1
+                    title: Workspace 1
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_title:
+                  value:
+                    detail: Invalid request
+                not_uniq_name:
+                  value:
+                    detail: Workspace with this title already exists
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - basicAuth: []
+  /api/v3/workspaces/{id}/dashboards:
+    get:
+      operationId: api_v3_workspaces_dashboards_list
+      summary: List workspace dashboards
+      description: Get a list of available dashboards for a given workspace. Only returns dashboards with TYPE=DATA. Only includes dashboards with enabled recipes for the specified workspace.
+      parameters:
+      - in: path
+        name: id
+        description: Workspace ID
+        schema:
+          type: integer
+        required: true
+        examples:
+          workspace_dashboards_list:
+            value:
+              id: 1
+      tags:
+      - Workspaces
+      responses:
+        '200':
+          description: Get a list of available dashboards for a given workspace
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Dashboard'
+              examples:
+                dashboards_list:
+                  value:
+                  - dashboard_id: 02299ae0-425f-4e67-b88f-d75d4d039f04
+                    title: Cross Channel Dashboard
+                    data_name: cross_channel
+                  - dashboard_id: 11111ae0-425f-44w2-b88f-d75d4d039f04
+                    title: Joined Ads Dashboard
+                    data_name: joined_ads
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_auth:
+                  value:
+                    detail: Error Message
+        '404':
+          description: Workspace Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                workspace_not_found:
+                  value:
+                    detail: Error Message
+      security:
+      - basicAuth: []
+components:
+  schemas:
+    Dashboard:
+      type: object
+      description: Dashboard object
+      properties:
+        dashboard_id:
+          type: string
+          description: Dashboard ID
+        title:
+          type: string
+          description: Dashboard title
+        data_name:
+          type: string
+          description: Dashboard Data Type
+      examples:
+      - dashboard:
+          value:
+            dashboard_id: 02299ae0-425f-4e67-b88f-d75d4d039f04
+            title: Cross Channel Dashboard
+            data_name: cross_channel
+    PaginatedWorkspaceList:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Number of workspaces
+        next:
+          type: string
+          description: URL to the next page
+        previous:
+          type: string
+          description: URL to the previous page
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workspace'
+      examples:
+      - workspaces_list:
+          value:
+            count: 2
+            next: null
+            previous: null
+            results:
+            - id: 1
+              title: Workspace 1
+            - id: 2
+              title: Workspace 2
+    ErrorResponse:
+      type: object
+      description: Error response object
+      properties:
+        detail:
+          type: string
+          description: Error message
+      examples:
+      - no_auth:
+          value:
+            detail: You do not have permission to perform this action.
+      - invalid_request:
+          value:
+            detail: Invalid request
+      - not_uniq_name:
+          value:
+            detail: Workspace with this title already exists
+    Workspace:
+      type: object
+      description: Workspace object
+      properties:
+        id:
+          type: integer
+          description: Workspace ID
+        title:
+          type: string
+          description: Workspace title
+      examples:
+      - workspace:
+          value:
+            id: 1
+            title: Workspace 1
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    tokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Bearer
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: dts_session_id
+      description: Cookie authentication. When using this method, the HTTP_X_IM_WORKSPACE_ID header must be included with the workspace_id (integer) value.

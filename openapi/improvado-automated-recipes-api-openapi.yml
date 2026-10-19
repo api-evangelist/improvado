@@ -1,0 +1,2936 @@
+openapi: 3.2.0
+info:
+  title: Improvado Embedded API v3 Automated Recipes API
+  version: 3.0.0
+  description: 'Improvado Embedded API V3 provides programmatic access to data extraction, transformation, and loading capabilities.
+
+
+    ## Authentication
+
+
+    This API supports multiple authentication methods depending on the endpoint:
+
+
+    ### Basic Authentication
+
+    Used for workspace-agnostic operations such as:
+
+    - Creating access tokens (`POST /api/v3/token`)
+
+    - Listing workspaces (`GET /api/v3/workspaces`)
+
+    - Managing workspaces (`POST /api/v3/workspaces`, `GET /api/v3/workspaces/{id}`, `PUT /api/v3/workspaces/{id}`)
+
+    - Getting iframe URLs (`POST /api/v3/get_iframe_url`)
+
+    - Listing available recipes (`GET /api/v3/recipes/`)
+
+    etc.
+
+
+    **Format**: `Authorization: Basic `
+
+
+    ### Bearer Token Authentication
+
+    Used for workspace-scoped operations after obtaining a token from `/api/v3/token`. The token is scoped to a specific workspace.
+
+
+    **Format**: `Authorization: Bearer `
+
+
+    ### Cookie Authentication
+
+    Alternative to Bearer token for browser-based integrations. When using cookie authentication, you must include the workspace ID in the request header.
+
+
+    **Cookie**: `dts_session_id=`
+
+
+    **Required Header**: `X-IM-WORKSPACE-ID: `
+
+
+    ## Workspace Scoping
+
+
+    Most API operations are workspace-scoped. After authenticating with Basic Auth, obtain a workspace-specific token using `POST /api/v3/token` with the desired `workspace_id`. This token provides access only to resources within that workspace, ensuring isolation between different customers or projects.
+
+
+    ## Errors
+
+
+    The automated recipe operations under `/api/v3.1/automated-recipe*` and
+
+    `GET /api/v3.1/connections/{connection_id}/accounts/` return errors as
+
+    `{"code": "...", "message": "...", "details": {...}}`. Branch on `code`, never on the
+
+    message text. See Errors for the catalogue of codes and the shape of `details`.
+
+
+    All other operations return errors as `{"detail": "error description"}`.'
+servers:
+- url: https://embedded.improvado.io
+tags:
+- name: Automated Recipes
+  x-zudoku-collapsed: true
+  description: 'Deploy and operate automated recipes through the v3.1 API.
+
+
+    An automated recipe turns a template into a SQL view in your workspace destination,
+
+    built from the extractions the template needs.
+
+
+    **Deploying a recipe takes four calls, in this order:**
+
+
+    1. `GET /api/v3.1/automated-recipe-templates/` - pick a template.
+
+    2. `POST /api/v3.1/automated-recipes/` - create the recipe. It is created empty.
+
+    3. `PUT /api/v3.1/automated-recipes/{recipe_id}/` - supply data sources, connections
+
+    and accounts. **This step is mandatory.**
+
+    4. `POST /api/v3.1/automated-recipes/{recipe_id}/build/` - start the build, then poll
+
+    `GET /api/v3.1/automated-recipes/{recipe_id}/` until `state` is `ready_to_work`
+
+    or `failed`.
+
+
+    Every path ends with a slash; a `301` means the slash is missing from your URL.
+
+    With a bearer token the workspace is the one the token was issued for; with cookie
+
+    authentication, send the workspace id in the `X-IM-WORKSPACE-ID` header.
+
+    All errors use one envelope - see Errors.
+
+
+    See the Deploying recipes guide for the full flow.'
+paths:
+  /api/v3.1/automated-recipe-templates/:
+    get:
+      operationId: api_v3_1_automated_recipe_templates_list
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl 'https://embedded.improvado.io/api/v3.1/automated-recipe-templates/?data_sources=facebook,google_ads' \\\n  -H \"Authorization: Bearer $TOKEN\"\n"
+      summary: List recipe templates
+      description: 'Lists the recipe templates your agency can deploy through the API, in catalogue order. A template belongs to the agency, not to a workspace, so the same `id` can be deployed in every workspace of the agency.
+
+
+        Only templates that can be deployed through the API are returned, so this list can be shorter than the catalogue the interface shows. Templates are created and edited in the interface only; this API reads them.
+
+
+        Pick a template here, then create a recipe from its `id`. The page holds 20 templates by default and 100 at most; `next` and `previous` are full v3.1 URLs.'
+      tags:
+      - Automated Recipes
+      parameters:
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: 'Case-insensitive substring of the template title. An empty value is rejected with 400 `invalid_query_parameter`.
+
+          '
+        required: false
+      - in: query
+        name: data_sources
+        schema:
+          type: string
+        description: 'Comma-separated data source names, for example `facebook,google_ads`. A template is returned when it supports at least one of them. An unknown name, an empty value or a bare comma is rejected with 400 `invalid_query_parameter`.
+
+          '
+        required: false
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+        description: 'Page number, starting at 1. A page beyond the last one is rejected with 400 `invalid_query_parameter`, not answered with an empty list.
+
+          '
+        required: false
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+          default: 20
+          maximum: 100
+        description: 'Templates per page, from 1 to 100. A larger value is rejected with 400 `invalid_query_parameter`; it is not silently capped.
+
+          '
+        required: false
+      responses:
+        '200':
+          description: One page of recipe templates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeTemplatePageV31'
+              examples:
+                templates_page:
+                  summary: First page of the catalogue
+                  value:
+                    count: 2
+                    next: null
+                    previous: null
+                    results:
+                    - id: 4021
+                      title: Paid media spend by campaign
+                      description: Daily spend, impressions and clicks from Facebook Ads and Google Ads in one table.
+                      data_sources:
+                      - name: facebook
+                        title: Facebook Ads
+                      - name: google_ads
+                        title: Google Ads
+                      categories:
+                      - name: paid_media
+                        title: Paid media
+                      origin: improvado
+                      build_mode: progressive
+                      created_at: 2026-03-11 09:12:44+00:00
+                      updated_at: 2026-08-04 16:20:03+00:00
+                    - id: 4108
+                      title: Email engagement weekly
+                      description: ''
+                      data_sources:
+                      - name: mailchimp
+                        title: Mailchimp
+                      categories: []
+                      origin: agency
+                      build_mode: atomic
+                      created_at: 2026-05-02 11:40:10+00:00
+                      updated_at: 2026-05-02 11:40:10+00:00
+        '400':
+          description: 'A query parameter has a value this operation does not accept, or the request could not be processed at all. `bad_request` is the catch-all code for a 4xx that has no code of its own, so the same envelope can arrive with another 4xx status, for example 415.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                invalid_query_parameter:
+                  summary: An unknown data source was passed in the filter
+                  value:
+                    code: invalid_query_parameter
+                    message: A query parameter has an invalid value.
+                    details:
+                      parameter: data_sources
+                      allowed_values: []
+                bad_request:
+                  summary: The request could not be processed
+                  value:
+                    code: bad_request
+                    message: The request could not be processed.
+                    details: {}
+        '401':
+          description: The bearer token is missing, invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                authentication_failed:
+                  value:
+                    code: authentication_failed
+                    message: 'Authentication failed: the token is missing, invalid or expired.'
+                    details: {}
+        '403':
+          description: The caller is authenticated but this operation is not available to them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                permission_denied:
+                  value:
+                    code: permission_denied
+                    message: This operation is not available to you.
+                    details: {}
+        '405':
+          description: The HTTP method is not supported on this path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                method_not_allowed:
+                  value:
+                    code: method_not_allowed
+                    message: Method not allowed.
+                    details: {}
+        '500':
+          description: Something failed on our side. The request was not served; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                internal_error:
+                  value:
+                    code: internal_error
+                    message: An internal error occurred.
+                    details: {}
+        '503':
+          description: 'Temporarily unavailable. The response carries the header `Retry-After: 30`, so wait 30 seconds and repeat the request.
+
+            '
+          headers:
+            Retry-After:
+              description: How many seconds to wait before repeating the request. Always `30`.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                service_unavailable:
+                  value:
+                    code: service_unavailable
+                    message: The service is temporarily unavailable. Re-read the resource, then retry.
+                    details: {}
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3.1/automated-recipe-templates/{template_id}/:
+    get:
+      operationId: api_v3_1_automated_recipe_templates_retrieve
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl 'https://embedded.improvado.io/api/v3.1/automated-recipe-templates/4021/' \\\n  -H \"Authorization: Bearer $TOKEN\"\n"
+      summary: Get a recipe template
+      description: 'Returns one recipe template with the templates it is built on and the columns of the table a recipe from it produces. Use it to check a template before you deploy it: `output_columns` is available without deploying anything, and an empty `output_columns` means the schema could not be read, not that the table has no columns.
+
+
+        `template_id` is an integer. A value that is not a positive integer answers 404 `not_found`, the same as a template that does not exist, belongs to another agency or cannot be deployed through the API.'
+      tags:
+      - Automated Recipes
+      parameters:
+      - in: path
+        name: template_id
+        schema:
+          type: integer
+        required: true
+        description: Recipe template identifier, as returned by the template list.
+        examples:
+          template_detail:
+            value: 4021
+      responses:
+        '200':
+          description: The recipe template
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeTemplateDetailV31'
+              examples:
+                template_detail:
+                  value:
+                    id: 4021
+                    title: Paid media spend by campaign
+                    description: Daily spend, impressions and clicks from Facebook Ads and Google Ads in one table.
+                    data_sources:
+                    - name: facebook
+                      title: Facebook Ads
+                    - name: google_ads
+                      title: Google Ads
+                    categories:
+                    - name: paid_media
+                      title: Paid media
+                    origin: improvado
+                    build_mode: progressive
+                    level: 0
+                    children:
+                    - id: 4022
+                      title: Facebook Ads base data
+                      level: 1
+                      parent_id: 4021
+                      children: []
+                    - id: 4023
+                      title: Google Ads base data
+                      level: 1
+                      parent_id: 4021
+                      children: []
+                    dependencies_count: 2
+                    output_columns:
+                    - name: date
+                      type: date
+                      user_kind: date_key
+                    - name: campaign_name
+                      type: string
+                      user_kind: dimension
+                    - name: spend
+                      type: number
+                      user_kind: metric
+                    created_at: 2026-03-11 09:12:44+00:00
+                    updated_at: 2026-08-04 16:20:03+00:00
+        '400':
+          description: 'The request could not be processed. `bad_request` is the catch-all code for a 4xx that has no code of its own, so the same envelope can arrive with another 4xx status, for example 415.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                bad_request:
+                  value:
+                    code: bad_request
+                    message: The request could not be processed.
+                    details: {}
+        '401':
+          description: The bearer token is missing, invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                authentication_failed:
+                  value:
+                    code: authentication_failed
+                    message: 'Authentication failed: the token is missing, invalid or expired.'
+                    details: {}
+        '403':
+          description: The caller is authenticated but this operation is not available to them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                permission_denied:
+                  value:
+                    code: permission_denied
+                    message: This operation is not available to you.
+                    details: {}
+        '404':
+          description: 'No such template for this agency. The same answer covers a template of another agency, a template that cannot be deployed through the API and a `template_id` that is not a positive integer.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    message: Template not found.
+                    details: {}
+        '405':
+          description: The HTTP method is not supported on this path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                method_not_allowed:
+                  value:
+                    code: method_not_allowed
+                    message: Method not allowed.
+                    details: {}
+        '500':
+          description: Something failed on our side. The request was not served; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                internal_error:
+                  value:
+                    code: internal_error
+                    message: An internal error occurred.
+                    details: {}
+        '503':
+          description: 'Temporarily unavailable. The response carries the header `Retry-After: 30`, so wait 30 seconds and repeat the request.
+
+            '
+          headers:
+            Retry-After:
+              description: How many seconds to wait before repeating the request. Always `30`.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                service_unavailable:
+                  value:
+                    code: service_unavailable
+                    message: The service is temporarily unavailable. Re-read the resource, then retry.
+                    details: {}
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3.1/automated-recipes/:
+    get:
+      operationId: api_v3_1_automated_recipes_list
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl 'https://embedded.improvado.io/api/v3.1/automated-recipes/?state=ready_to_work' \\\n  -H \"Authorization: Bearer $TOKEN\"\n"
+      summary: List recipes
+      description: 'Lists the automated recipes of the workspace the request is authenticated for, the most recently changed first.
+
+
+        Every field you need to triage a fleet is already here: `state`, `degraded`, `not_delivered_reasons` and `error`. Read the detail of a recipe only when you need its configuration or the per-data-source breakdown.
+
+
+        The page holds 20 recipes by default and 100 at most; `next` and `previous` are full v3.1 URLs.'
+      tags:
+      - Automated Recipes
+      parameters:
+      - in: query
+        name: template_id
+        schema:
+          type: integer
+        description: 'Return only the recipes deployed from this template. A value that is not a positive integer is rejected with 400 `invalid_query_parameter`.
+
+          '
+        required: false
+      - in: query
+        name: state
+        schema:
+          type: string
+          enum:
+          - extracting_data
+          - building_dependencies
+          - ready_to_work
+          - failed
+        description: 'Return only the recipes in this state. The value has to match one of the four snake_case states exactly; anything else, including a v3 value such as `Ready to work`, is rejected with 400 `invalid_query_parameter` and the allowed values in `details.allowed_values`.
+
+          '
+        required: false
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+        description: 'Page number, starting at 1. A page beyond the last one is rejected with 400 `invalid_query_parameter`, not answered with an empty list.
+
+          '
+        required: false
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+          default: 20
+          maximum: 100
+        description: 'Recipes per page, from 1 to 100. A larger value is rejected with 400 `invalid_query_parameter`; it is not silently capped.
+
+          '
+        required: false
+      responses:
+        '200':
+          description: One page of recipes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipePageV31'
+              examples:
+                recipes_page:
+                  summary: A degraded recipe and a failed one
+                  value:
+                    count: 2
+                    next: null
+                    previous: null
+                    results:
+                    - recipe_id: '12647075758935484548'
+                      template_id: 4021
+                      template_title: Paid media spend by campaign
+                      title: Paid media spend by campaign
+                      workspace_id: 5120
+                      state: ready_to_work
+                      degraded: true
+                      not_delivered_reasons:
+                      - account_disabled
+                      - timed_out
+                      error: null
+                      datatable_id: 88214
+                      last_build_at: 2026-09-18 07:41:02+00:00
+                      created_at: 2026-09-17 12:03:55+00:00
+                      updated_at: 2026-09-18 07:41:02+00:00
+                    - recipe_id: '12647075758935484711'
+                      template_id: 4108
+                      template_title: Email engagement weekly
+                      title: Email engagement weekly
+                      workspace_id: 5120
+                      state: failed
+                      degraded: false
+                      not_delivered_reasons: []
+                      error:
+                        code: no_data_delivered
+                        message: No data was delivered for this recipe.
+                        stage: extraction
+                        data_source: mailchimp
+                        occurred_at: 2026-09-19 05:22:48+00:00
+                        details: {}
+                      datatable_id: null
+                      last_build_at: 2026-09-19 04:10:00+00:00
+                      created_at: 2026-09-19 03:58:31+00:00
+                      updated_at: 2026-09-19 05:22:48+00:00
+        '400':
+          description: 'A query parameter has a value this operation does not accept, or the request could not be processed at all. `bad_request` is the catch-all code for a 4xx that has no code of its own, so the same envelope can arrive with another 4xx status, for example 415.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                invalid_query_parameter:
+                  summary: A v3 state value was passed to the filter
+                  value:
+                    code: invalid_query_parameter
+                    message: A query parameter has an invalid value.
+                    details:
+                      parameter: state
+                      allowed_values:
+                      - extracting_data
+                      - building_dependencies
+                      - ready_to_work
+                      - failed
+                bad_request:
+                  summary: The request could not be processed
+                  value:
+                    code: bad_request
+                    message: The request could not be processed.
+                    details: {}
+        '401':
+          description: The bearer token is missing, invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                authentication_failed:
+                  value:
+                    code: authentication_failed
+                    message: 'Authentication failed: the token is missing, invalid or expired.'
+                    details: {}
+        '403':
+          description: The caller is authenticated but this operation is not available to them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                permission_denied:
+                  value:
+                    code: permission_denied
+                    message: This operation is not available to you.
+                    details: {}
+        '405':
+          description: The HTTP method is not supported on this path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                method_not_allowed:
+                  value:
+                    code: method_not_allowed
+                    message: Method not allowed.
+                    details: {}
+        '500':
+          description: Something failed on our side. The request was not served; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                internal_error:
+                  value:
+                    code: internal_error
+                    message: An internal error occurred.
+                    details: {}
+        '503':
+          description: 'Temporarily unavailable. The response carries the header `Retry-After: 30`, so wait 30 seconds and repeat the request.
+
+            '
+          headers:
+            Retry-After:
+              description: How many seconds to wait before repeating the request. Always `30`.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                service_unavailable:
+                  value:
+                    code: service_unavailable
+                    message: The service is temporarily unavailable. Re-read the resource, then retry.
+                    details: {}
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    post:
+      operationId: api_v3_1_automated_recipes_create
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl -X POST 'https://embedded.improvado.io/api/v3.1/automated-recipes/' \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"template_id\": 4021, \"title\": \"Paid media spend by campaign\"}'\n"
+      summary: Create a recipe
+      description: 'Creates a recipe from a template in the workspace the request is authenticated for. The recipe is created **empty** - no data sources, no connections, no accounts - so the next call has to be `PUT /api/v3.1/automated-recipes/{recipe_id}/`. Starting a build before that answers 409 `recipe_not_configured`.
+
+
+        **One recipe per template per workspace.** A second create from the same template answers 409 `recipe_already_exists` and names the recipes that already exist. Do not create recipes from one template in one workspace in parallel: the second call loses the race and gets the same answer.
+
+
+        `title` names the recipe and nothing else. It is optional and at most 255 characters; if it is missing, `null`, empty or only spaces, the template supplies the default name. **The name of the output table is derived from the title of the template at the moment the recipe is created**, never from `title` in this body, and the recipe keeps that name for good: renaming the template later changes the table name only for recipes deployed after the rename. To read the physical name, take `datatable_id` from this response and call `GET /api/v3/data-tables/{data_table_id}`, then read `sql_name`.'
+      tags:
+      - Automated Recipes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - template_id
+              properties:
+                template_id:
+                  type: integer
+                  description: 'Identifier of the template to deploy, as returned by the template list. It has to belong to your agency and be deployable through the API; anything else answers 400 `template_not_found`.
+
+                    '
+                title:
+                  type:
+                  - string
+                  - 'null'
+                  maxLength: 255
+                  description: 'Name of the recipe, at most 255 characters. Omit it, or send `null`, an empty string or only spaces, to let the template name the recipe. It has no effect on the name of the output table.
+
+                    '
+            examples:
+              create_recipe:
+                value:
+                  template_id: 4021
+                  title: Paid media spend by campaign
+              create_recipe_without_title:
+                summary: Let the template supply the name
+                value:
+                  template_id: 4021
+      responses:
+        '201':
+          description: 'The recipe was created. It holds no configuration yet, so `data_sources`, `connections` and `sources` are empty and `last_build_at` is `null`.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeV31'
+              examples:
+                recipe_created:
+                  summary: A recipe as it comes back from create
+                  value:
+                    recipe_id: '12647075758935484711'
+                    template_id: 4021
+                    template_title: Paid media spend by campaign
+                    title: Paid media spend by campaign
+                    workspace_id: 5120
+                    state: extracting_data
+                    degraded: false
+                    not_delivered_reasons: []
+                    error: null
+                    datatable_id: 88407
+                    last_build_at: null
+                    created_at: 2026-09-19 03:58:31+00:00
+                    updated_at: 2026-09-19 03:58:31+00:00
+                    data_sources: []
+                    allowed_data_sources:
+                    - facebook
+                    - google_ads
+                    connections: []
+                    sync_from_date: 2026-09-19
+                    sources: []
+        '400':
+          description: 'The body is not valid JSON, a field of it is invalid, or the template cannot be deployed. `bad_request` is the catch-all code for a 4xx that has no code of its own, so the same envelope can arrive with another 4xx status, for example 415.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                validation_error:
+                  summary: A field of the body is invalid
+                  value:
+                    code: validation_error
+                    message: The request is invalid.
+                    details:
+                      fields:
+                      - field: title
+                        code: max_length
+                        message: Ensure this field has no more than 255 characters.
+                malformed_request:
+                  summary: The body is not valid JSON
+                  value:
+                    code: malformed_request
+                    message: The request body is not valid JSON.
+                    details: {}
+                template_not_found:
+                  summary: No such template for this agency
+                  value:
+                    code: template_not_found
+                    message: The template does not exist or cannot be deployed through the API.
+                    details:
+                      template_id: 4021
+                bad_request:
+                  summary: The request could not be processed
+                  value:
+                    code: bad_request
+                    message: The request could not be processed.
+                    details: {}
+        '401':
+          description: The bearer token is missing, invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                authentication_failed:
+                  value:
+                    code: authentication_failed
+                    message: 'Authentication failed: the token is missing, invalid or expired.'
+                    details: {}
+        '403':
+          description: The caller is authenticated but this operation is not available to them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                permission_denied:
+                  value:
+                    code: permission_denied
+                    message: This operation is not available to you.
+                    details: {}
+        '405':
+          description: The HTTP method is not supported on this path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                method_not_allowed:
+                  value:
+                    code: method_not_allowed
+                    message: Method not allowed.
+                    details: {}
+        '409':
+          description: 'The workspace or the template is not in a state that allows the recipe to be created. Nothing was created; read the recipes of the workspace before you try again.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                recipe_already_exists:
+                  summary: The template is already deployed in this workspace
+                  description: '`existing_recipe_ids` is ordered: the recipes that are not `failed` come first, and within each group the most recently updated one comes first, so the first id is the one worth reusing. **The list can be empty** - that happens when two creates raced each other - and then the recipes are found with `GET /api/v3.1/automated-recipes/?template_id={template_id}`.
+
+                    '
+                  value:
+                    code: recipe_already_exists
+                    message: A recipe from this template already exists in this workspace.
+                    details:
+                      existing_recipe_ids:
+                      - '12647075758935484548'
+                      - '12647075758935484399'
+                template_not_deployable:
+                  summary: The template carries no configuration that can be deployed
+                  value:
+                    code: template_not_deployable
+                    message: The template has no deployable configuration.
+                    details:
+                      template_id: 4021
+                view_name_taken:
+                  summary: Another recipe already holds the output table name of this template
+                  value:
+                    code: view_name_taken
+                    message: The output table name is already used by another recipe.
+                    details:
+                      view_name: paid_media_spend_by_campaign
+                      conflicting_recipe_ids:
+                      - '12647075758935484399'
+                no_active_destination:
+                  summary: The workspace has no destination to build into
+                  value:
+                    code: no_active_destination
+                    message: The workspace has no active destination.
+                    details: {}
+                destination_not_supported:
+                  summary: Recipes cannot be built into the destination of this workspace
+                  value:
+                    code: destination_not_supported
+                    message: The destination of this workspace is not supported.
+                    details: {}
+        '500':
+          description: Something failed on our side. The request was not served; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                internal_error:
+                  value:
+                    code: internal_error
+                    message: An internal error occurred.
+                    details: {}
+        '503':
+          description: 'Temporarily unavailable. The response carries the header `Retry-After: 30`, so wait 30 seconds, re-read the recipes of the workspace to see whether the recipe was created after all, and only then repeat the request.
+
+            '
+          headers:
+            Retry-After:
+              description: How many seconds to wait before repeating the request. Always `30`.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                data_table_reservation_failed:
+                  summary: The output table could not be reserved right now
+                  value:
+                    code: data_table_reservation_failed
+                    message: The output table could not be reserved. Re-read, then retry.
+                    details: {}
+                service_unavailable:
+                  value:
+                    code: service_unavailable
+                    message: The service is temporarily unavailable. Re-read the resource, then retry.
+                    details: {}
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3.1/automated-recipes/{recipe_id}/:
+    get:
+      operationId: api_v3_1_automated_recipes_retrieve
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl 'https://embedded.improvado.io/api/v3.1/automated-recipes/12647075758935484548/' \\\n  -H \"Authorization: Bearer $TOKEN\"\n"
+      summary: Get a recipe
+      description: 'Returns one recipe with the configuration it holds and what the last build did with it. This is the operation to poll after starting a build: repeat it until `state` is `ready_to_work` or `failed`.
+
+
+        `ready_to_work` means built, not built completely. A build runs on the extractions that delivered, so check `degraded` and `sources` as well: `degraded: true` says something was left out, `not_delivered_reasons` says why in one line, and `sources` gives the breakdown per data source. `error` is filled in if and only if `state` is `failed`.
+
+
+        A recipe that was created but never configured comes back with an empty `data_sources`, `last_build_at: null` and `state: extracting_data`. Configure it before you build it.'
+      tags:
+      - Automated Recipes
+      parameters:
+      - in: path
+        name: recipe_id
+        schema:
+          type: string
+        required: true
+        description: Recipe identifier, as returned when the recipe was created. A string of digits.
+        examples:
+          recipe_detail:
+            value: '12647075758935484548'
+      responses:
+        '200':
+          description: The recipe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeV31'
+              examples:
+                built_recipe:
+                  summary: A configured recipe whose last build left one account out
+                  value:
+                    recipe_id: '12647075758935484548'
+                    template_id: 4021
+                    template_title: Paid media spend by campaign
+                    title: Paid media spend by campaign
+                    workspace_id: 5120
+                    state: ready_to_work
+                    degraded: true
+                    not_delivered_reasons:
+                    - account_disabled
+                    error: null
+                    datatable_id: 88214
+                    last_build_at: 2026-09-18 07:41:02+00:00
+                    created_at: 2026-09-17 12:03:55+00:00
+                    updated_at: 2026-09-18 07:41:02+00:00
+                    data_sources:
+                    - facebook
+                    - google_ads
+                    allowed_data_sources:
+                    - facebook
+                    - google_ads
+                    connections:
+                    - connection_id: 33120
+                      connection_data_source: facebook
+                      accounts:
+                      - id: 918204
+                      - id: 918205
+                    - connection_id: 33199
+                      connection_data_source: google_ads
+                      accounts:
+                      - id: 927710
+                    sync_from_date: 2026-01-01
+                    sources:
+                    - data_source: facebook
+                      status: ready
+                      error: null
+                      not_delivered_count: 1
+                      not_delivered:
+                      - extraction_id: 5512043
+                        account_id: 918205
+                        reason: account_disabled
+                    - data_source: google_ads
+                      status: ready
+                      error: null
+                      not_delivered_count: 0
+                      not_delivered: []
+                created_not_configured:
+                  summary: A recipe that has been created but not configured yet
+                  value:
+                    recipe_id: '12647075758935484711'
+                    template_id: 4108
+                    template_title: Email engagement weekly
+                    title: Email engagement weekly
+                    workspace_id: 5120
+                    state: extracting_data
+                    degraded: false
+                    not_delivered_reasons: []
+                    error: null
+                    datatable_id: null
+                    last_build_at: null
+                    created_at: 2026-09-19 03:58:31+00:00
+                    updated_at: 2026-09-19 03:58:31+00:00
+                    data_sources: []
+                    allowed_data_sources:
+                    - mailchimp
+                    connections: []
+                    sync_from_date: 2026-09-19
+                    sources: []
+        '400':
+          description: 'The request could not be processed. `bad_request` is the catch-all code for a 4xx that has no code of its own, so the same envelope can arrive with another 4xx status, for example 415.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                bad_request:
+                  value:
+                    code: bad_request
+                    message: The request could not be processed.
+                    details: {}
+        '401':
+          description: The bearer token is missing, invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                authentication_failed:
+                  value:
+                    code: authentication_failed
+                    message: 'Authentication failed: the token is missing, invalid or expired.'
+                    details: {}
+        '403':
+          description: The caller is authenticated but this operation is not available to them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                permission_denied:
+                  value:
+                    code: permission_denied
+                    message: This operation is not available to you.
+                    details: {}
+        '404':
+          description: 'No such recipe in this workspace. The same answer covers a recipe of another workspace or agency, a recipe that was deleted and a recipe that is not managed through this API.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    message: Recipe not found.
+                    details: {}
+        '405':
+          description: The HTTP method is not supported on this path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                method_not_allowed:
+                  value:
+                    code: method_not_allowed
+                    message: Method not allowed.
+                    details: {}
+        '500':
+          description: Something failed on our side. The request was not served; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                internal_error:
+                  value:
+                    code: internal_error
+                    message: An internal error occurred.
+                    details: {}
+        '503':
+          description: 'Temporarily unavailable. The response carries the header `Retry-After: 30`, so wait 30 seconds and repeat the request.
+
+            '
+          headers:
+            Retry-After:
+              description: How many seconds to wait before repeating the request. Always `30`.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                service_unavailable:
+                  value:
+                    code: service_unavailable
+                    message: The service is temporarily unavailable. Re-read the resource, then retry.
+                    details: {}
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    put:
+      operationId: api_v3_1_automated_recipes_update
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl -X PUT 'https://embedded.improvado.io/api/v3.1/automated-recipes/12647075758935484548/' \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n        \"data_sources\": [\"facebook\", \"google_ads\"],\n        \"connections\": [\n          {\"connection_id\": 33120, \"connection_data_source\": \"facebook\",\n           \"accounts\": [{\"id\": 918204}, {\"id\": 918205}]},\n          {\"connection_id\": 33199, \"connection_data_source\": \"google_ads\",\n           \"accounts\": [{\"id\": 927710}]}\n        ],\n        \"sync_from_date\": \"2026-01-01\"\n      }'\n"
+      summary: Configure a recipe
+      description: 'Gives a recipe the data sources, connections and accounts it builds from. **This step is mandatory**: a recipe created through the API holds no configuration, and a build started before it answers 409 `recipe_not_configured`.
+
+
+        The body is the **full set**, not a delta: send every data source, connection and account the recipe should have, including the ones it already has. Take `connection_id` from `GET /api/v3/datasources/{datasource_name}/connections` and every account `id` from `GET /api/v3.1/connections/{connection_id}/accounts/` of this same workspace, and use only accounts with `is_active: true` - anything else is rejected with 400 `account_unavailable`.
+
+
+        **Configuration only grows.** Data sources, connections and accounts can be added, and none of them can be taken away: a body that leaves one out is rejected with 409 and the matching `*_removal_not_allowed` code. **An account cannot be removed from a recipe at all**, by this operation or by any other, and deleting the recipe does not remove it either. If the data of an account has to be taken out of a result, contact support.
+
+
+        A successful call answers 200 with the recipe as it now stands, so the response can be compared with what was sent. It changes neither `state` nor `error` and starts no build; `POST .../build/` does that.'
+      tags:
+      - Automated Recipes
+      parameters:
+      - in: path
+        name: recipe_id
+        schema:
+          type: string
+        required: true
+        description: Recipe identifier, as returned when the recipe was created. A string of digits.
+        examples:
+          recipe_configure:
+            value: '12647075758935484548'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data_sources
+              - connections
+              properties:
+                data_sources:
+                  type: array
+                  description: 'Every data source the recipe reads, by name. Cannot be empty, and every name has to be one of the recipe''s `allowed_data_sources`. A data source already configured has to stay in the list.
+
+                    '
+                  items:
+                    type: string
+                connections:
+                  type: array
+                  description: 'Every connection the recipe reads, with its accounts. Cannot be empty. Each `connection_data_source` has to appear in `data_sources`, the pair of `connection_id` and `connection_data_source` has to be unique in the list, and every data source added by this call needs at least one connection here.
+
+                    '
+                  items:
+                    type: object
+                    required:
+                    - connection_id
+                    - connection_data_source
+                    - accounts
+                    properties:
+                      connection_id:
+                        type: integer
+                        description: Connection identifier in this workspace.
+                      connection_data_source:
+                        type: string
+                        description: Data source name of that connection, for example `facebook`.
+                      accounts:
+                        type: array
+                        description: 'The accounts of that connection the recipe reads. Cannot be empty. Every account already configured has to stay in the list.
+
+                          '
+                        items:
+                          type: object
+                          required:
+                          - id
+                          properties:
+                            id:
+                              type: integer
+                              description: 'Account identifier from `GET /api/v3.1/connections/{connection_id}/accounts/` of this workspace, with `is_active: true`.
+
+                                '
+                sync_from_date:
+                  type:
+                  - string
+                  - 'null'
+                  format: date
+                  description: 'The first date the recipe collects data from. Omit it or send `null` to leave the date the recipe already has unchanged.
+
+                    '
+            examples:
+              configure_recipe:
+                value:
+                  data_sources:
+                  - facebook
+                  - google_ads
+                  connections:
+                  - connection_id: 33120
+                    connection_data_source: facebook
+                    accounts:
+                    - id: 918204
+                    - id: 918205
+                  - connection_id: 33199
+                    connection_data_source: google_ads
+                    accounts:
+                    - id: 927710
+                  sync_from_date: 2026-01-01
+              add_an_account:
+                summary: Adding one account - the accounts already configured are sent again
+                value:
+                  data_sources:
+                  - facebook
+                  connections:
+                  - connection_id: 33120
+                    connection_data_source: facebook
+                    accounts:
+                    - id: 918204
+                    - id: 918205
+                    - id: 918301
+      responses:
+        '200':
+          description: The recipe as it now stands, with the configuration this call saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeV31'
+              examples:
+                recipe_configured:
+                  summary: A configured recipe that has not been built yet
+                  value:
+                    recipe_id: '12647075758935484548'
+                    template_id: 4021
+                    template_title: Paid media spend by campaign
+                    title: Paid media spend by campaign
+                    workspace_id: 5120
+                    state: extracting_data
+                    degraded: false
+                    not_delivered_reasons: []
+                    error: null
+                    datatable_id: 88214
+                    last_build_at: null
+                    created_at: 2026-09-17 12:03:55+00:00
+                    updated_at: 2026-09-17 12:09:41+00:00
+                    data_sources:
+                    - facebook
+                    - google_ads
+                    allowed_data_sources:
+                    - facebook
+                    - google_ads
+                    connections:
+                    - connection_id: 33120
+                      connection_data_source: facebook
+                      accounts:
+                      - id: 918204
+                      - id: 918205
+                    - connection_id: 33199
+                      connection_data_source: google_ads
+                      accounts:
+                      - id: 927710
+                    sync_from_date: 2026-01-01
+                    sources: []
+        '400':
+          description: 'The body is not valid JSON, a field of it is invalid, or it names something this workspace cannot give the recipe. Nothing was saved. `bad_request` is the catch-all code for a 4xx that has no code of its own, so the same envelope can arrive with another 4xx status, for example 415.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                validation_error:
+                  summary: A field of the body is missing or has the wrong shape
+                  value:
+                    code: validation_error
+                    message: The request is invalid.
+                    details:
+                      fields:
+                      - field: connections[0].accounts
+                        code: empty
+                        message: This list may not be empty.
+                malformed_request:
+                  summary: The body is not valid JSON
+                  value:
+                    code: malformed_request
+                    message: The request body is not valid JSON.
+                    details: {}
+                data_source_not_allowed:
+                  summary: A data source the template does not allow
+                  value:
+                    code: data_source_not_allowed
+                    message: 'Data sources not allowed for this recipe: tiktok_ads'
+                    details:
+                      data_sources:
+                      - tiktok_ads
+                connection_data_source_not_selected:
+                  summary: A connection whose data source is not in `data_sources`
+                  value:
+                    code: connection_data_source_not_selected
+                    message: 'Connection at index 1: connection_data_source "google_ads" is not in the selected data_sources list'
+                    details:
+                      connections:
+                      - index: 1
+                        connection_id: 33199
+                        connection_data_source: google_ads
+                duplicate_connection:
+                  summary: The same connection and data source listed twice
+                  value:
+                    code: duplicate_connection
+                    message: 'Connection at index 1: duplicate combination of connection_id=33120 and connection_data_source="facebook"'
+                    details:
+                      connections:
+                      - index: 1
+                        connection_id: 33120
+                        connection_data_source: facebook
+                data_source_without_connection:
+                  summary: A data source was added with no connection for it
+                  value:
+                    code: data_source_without_connection
+                    message: 'Data sources added without a connection: google_ads. Every newly added data source needs at least one entry in connections.'
+                    details:
+                      data_sources:
+                      - google_ads
+                account_unavailable:
+                  summary: 'An account id is unknown, belongs to another connection or workspace, or is not active
+
+                    '
+                  value:
+                    code: account_unavailable
+                    message: Some accounts are unknown or unavailable. Take account ids from GET /api/v3.1/connections/{connection_id}/accounts/ of this workspace.
+                    details:
+                      connections:
+                      - connection_id: 33120
+                        connection_data_source: facebook
+                        accounts:
+                        - id: 918999
+                bad_request:
+                  summary: The request could not be processed
+                  value:
+                    code: bad_request
+                    message: The request could not be processed.
+                    details: {}
+        '401':
+          description: The bearer token is missing, invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                authentication_failed:
+                  value:
+                    code: authentication_failed
+                    message: 'Authentication failed: the token is missing, invalid or expired.'
+                    details: {}
+        '403':
+          description: The caller is authenticated but this operation is not available to them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                permission_denied:
+                  value:
+                    code: permission_denied
+                    message: This operation is not available to you.
+                    details: {}
+        '404':
+          description: 'No such recipe in this workspace. The same answer covers a recipe of another workspace or agency, a recipe that was deleted and a recipe that is not managed through this API.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    message: Recipe not found.
+                    details: {}
+        '405':
+          description: The HTTP method is not supported on this path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                method_not_allowed:
+                  value:
+                    code: method_not_allowed
+                    message: Method not allowed.
+                    details: {}
+        '409':
+          description: 'The body leaves out something the recipe already has. Configuration only grows, so nothing was saved: send the full set, including what is already configured. Accounts in particular cannot be removed from a recipe at all - contact support if the data of an account has to be taken out of a result.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                data_source_removal_not_allowed:
+                  summary: A configured data source is missing from the body
+                  value:
+                    code: data_source_removal_not_allowed
+                    message: 'Cannot remove existing data sources: facebook. You can only add new data sources.'
+                    details:
+                      data_sources:
+                      - facebook
+                connection_removal_not_allowed:
+                  summary: A configured connection is missing from the body
+                  value:
+                    code: connection_removal_not_allowed
+                    message: 'Cannot remove existing connections: (connection_id=33120, data_source="facebook"). You can only add new connections.'
+                    details:
+                      connections:
+                      - connection_id: 33120
+                        connection_data_source: facebook
+                account_removal_not_allowed:
+                  summary: A configured account is missing from the body
+                  value:
+                    code: account_removal_not_allowed
+                    message: Cannot remove accounts [918205] from connection (connection_id=33120, data_source="facebook"). You can only add new accounts.
+                    details:
+                      connections:
+                      - connection_id: 33120
+                        connection_data_source: facebook
+                        accounts:
+                        - id: 918205
+        '500':
+          description: Something failed on our side. The request was not served; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                internal_error:
+                  value:
+                    code: internal_error
+                    message: An internal error occurred.
+                    details: {}
+        '503':
+          description: 'Temporarily unavailable. The response carries the header `Retry-After: 30`, so wait 30 seconds, re-read the recipe to see what it holds now, and only then repeat the request.
+
+            '
+          headers:
+            Retry-After:
+              description: How many seconds to wait before repeating the request. Always `30`.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                account_check_unavailable:
+                  summary: The accounts in the body could not be checked right now
+                  value:
+                    code: account_check_unavailable
+                    message: Accounts could not be checked right now. Nothing was saved; retry.
+                    details: {}
+                service_unavailable:
+                  value:
+                    code: service_unavailable
+                    message: The service is temporarily unavailable. Re-read the resource, then retry.
+                    details: {}
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    delete:
+      operationId: api_v3_1_automated_recipes_destroy
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl -X DELETE 'https://embedded.improvado.io/api/v3.1/automated-recipes/12647075758935484548/' \\\n  -H \"Authorization: Bearer $TOKEN\"\n"
+      summary: Delete a recipe
+      description: 'Deletes a recipe. This is a hard delete and it cannot be undone: the output tables the recipe produced are dropped, its configuration is removed, and the intermediate recipes it was built on go with it. The cascade follows the recipes this one reads from, not the ones that read it: a recipe built on top of this one stays in place and breaks.
+
+
+        **The extractions created for the recipe are not deleted.** They keep running on their schedule and the data they have already collected stays where it is, so a recipe deployed from the same template in the same workspace later sees the data of all those accounts, whatever set of accounts its own configuration names. Deleting a recipe is therefore not a way to narrow what a result contains; if the data of an account has to be taken out, contact support.
+
+
+        The template slot and the output table name are free again as soon as the 204 arrives, but the registration of the table on the platform side is removed asynchronously. Before deploying the same template here again, wait until the recipe is gone from `GET /api/v3.1/automated-recipes/`; a create sent straight after the 204 can be given the `datatable_id` of the old table, which is then dropped.
+
+
+        Answers 204 with an empty body. If the recipe itself could not be deleted, the answer is 500 `delete_incomplete`; an intermediate recipe that could not be deleted is logged on our side and does not change the answer.'
+      tags:
+      - Automated Recipes
+      parameters:
+      - in: path
+        name: recipe_id
+        schema:
+          type: string
+        required: true
+        description: Recipe identifier, as returned when the recipe was created. A string of digits.
+        examples:
+          recipe_delete:
+            value: '12647075758935484548'
+      responses:
+        '204':
+          description: The recipe was deleted. The response has no body.
+        '400':
+          description: 'The request could not be processed. `bad_request` is the catch-all code for a 4xx that has no code of its own, so the same envelope can arrive with another 4xx status, for example 415.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                bad_request:
+                  value:
+                    code: bad_request
+                    message: The request could not be processed.
+                    details: {}
+        '401':
+          description: The bearer token is missing, invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                authentication_failed:
+                  value:
+                    code: authentication_failed
+                    message: 'Authentication failed: the token is missing, invalid or expired.'
+                    details: {}
+        '403':
+          description: The caller is authenticated but this operation is not available to them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                permission_denied:
+                  value:
+                    code: permission_denied
+                    message: This operation is not available to you.
+                    details: {}
+        '404':
+          description: 'No such recipe in this workspace. The same answer covers a recipe of another workspace or agency, a recipe that was already deleted and a recipe that is not managed through this API.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    message: Recipe not found.
+                    details: {}
+        '405':
+          description: The HTTP method is not supported on this path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                method_not_allowed:
+                  value:
+                    code: method_not_allowed
+                    message: Method not allowed.
+                    details: {}
+        '409':
+          description: 'The tables of the recipe could not be dropped, because the workspace has no destination this API can work with. Read the recipe again to see whether it is still there.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                no_active_destination:
+                  summary: The workspace has no destination to drop the tables from
+                  value:
+                    code: no_active_destination
+                    message: The workspace has no active destination.
+                    details: {}
+                destination_not_supported:
+                  summary: The destination of this workspace is not supported
+                  value:
+                    code: destination_not_supported
+                    message: The destination of this workspace is not supported.
+                    details: {}
+        '500':
+          description: 'The recipe itself could not be deleted, or something else failed on our side. Read the recipe again to see whether it is still there.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                delete_incomplete:
+                  summary: The recipe is still there
+                  value:
+                    code: delete_incomplete
+                    message: The recipe could not be deleted.
+                    details:
+                      recipe_id: '12647075758935484548'
+                internal_error:
+                  value:
+                    code: internal_error
+                    message: An internal error occurred.
+                    details: {}
+        '503':
+          description: 'Temporarily unavailable. The response carries the header `Retry-After: 30`, so wait 30 seconds, re-read the recipe to see whether it is still there, and only then repeat the request.
+
+            '
+          headers:
+            Retry-After:
+              description: How many seconds to wait before repeating the request. Always `30`.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                service_unavailable:
+                  value:
+                    code: service_unavailable
+                    message: The service is temporarily unavailable. Re-read the resource, then retry.
+                    details: {}
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3.1/automated-recipes/{recipe_id}/build/:
+    post:
+      operationId: api_v3_1_automated_recipes_build
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl -X POST 'https://embedded.improvado.io/api/v3.1/automated-recipes/12647075758935484548/build/' \\\n  -H \"Authorization: Bearer $TOKEN\"\n"
+      summary: Start a recipe build
+      description: 'Starts a build of a configured recipe and answers 202 straight away with the recipe, whose `last_build_at` is the moment the build started. The request has no body.
+
+
+        The build runs in the background. Poll `GET /api/v3.1/automated-recipes/{recipe_id}/` until `state` is `ready_to_work` or `failed`. There is no hard limit on how long a build takes, but in practice it finishes within 120 minutes; if there is still no outcome well after that, contact support with the `x-im-trace-id` of one of your requests.
+
+
+        `ready_to_work` means built, not built completely: a build runs on the extractions that delivered, so read `degraded` and `sources` as well. A recipe that has not been configured with `PUT` cannot be built and answers 409 `recipe_not_configured`. Starting a second build while one is running answers 409 `build_already_running`.
+
+
+        Use this operation again after a failed build, once the reason in `error` has been dealt with, and to pick up data that arrived late.'
+      tags:
+      - Automated Recipes
+      parameters:
+      - in: path
+        name: recipe_id
+        schema:
+          type: string
+        required: true
+        description: Recipe identifier, as returned when the recipe was created. A string of digits.
+        examples:
+          recipe_build:
+            value: '12647075758935484548'
+      responses:
+        '202':
+          description: 'The build was accepted and is running. The recipe comes back as it stands right now, with `last_build_at` set to the moment the build started.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeV31'
+              examples:
+                build_started:
+                  summary: A build that has just been accepted
+                  value:
+                    recipe_id: '12647075758935484548'
+                    template_id: 4021
+                    template_title: Paid media spend by campaign
+                    title: Paid media spend by campaign
+                    workspace_id: 5120
+                    state: extracting_data
+                    degraded: false
+                    not_delivered_reasons: []
+                    error: null
+                    datatable_id: 88214
+                    last_build_at: 2026-09-20 08:15:22+00:00
+                    created_at: 2026-09-17 12:03:55+00:00
+                    updated_at: 2026-09-20 08:15:22+00:00
+                    data_sources:
+                    - facebook
+                    - google_ads
+                    allowed_data_sources:
+                    - facebook
+                    - google_ads
+                    connections:
+                    - connection_id: 33120
+                      connection_data_source: facebook
+                      accounts:
+                      - id: 918204
+                    - connection_id: 33199
+                      connection_data_source: google_ads
+                      accounts:
+                      - id: 927710
+                    sync_from_date: 2026-01-01
+                    sources:
+                    - data_source: facebook
+                      status: queued
+                      error: null
+                      not_delivered_count: 0
+                      not_delivered: []
+                    - data_source: google_ads
+                      status: queued
+                      error: null
+                      not_delivered_count: 0
+                      not_delivered: []
+        '400':
+          description: 'The request could not be processed. `bad_request` is the catch-all code for a 4xx that has no code of its own, so the same envelope can arrive with another 4xx status, for example 415.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                bad_request:
+                  value:
+                    code: bad_request
+                    message: The request could not be processed.
+                    details: {}
+        '401':
+          description: The bearer token is missing, invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                authentication_failed:
+                  value:
+                    code: authentication_failed
+                    message: 'Authentication failed: the token is missing, invalid or expired.'
+                    details: {}
+        '403':
+          description: The caller is authenticated but this operation is not available to them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                permission_denied:
+                  value:
+                    code: permission_denied
+                    message: This operation is not available to you.
+                    details: {}
+        '404':
+          description: 'No such recipe in this workspace. The same answer covers a recipe of another workspace or agency, a recipe that was deleted and a recipe that is not managed through this API.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    message: Recipe not found.
+                    details: {}
+        '405':
+          description: The HTTP method is not supported on this path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                method_not_allowed:
+                  value:
+                    code: method_not_allowed
+                    message: Method not allowed.
+                    details: {}
+        '409':
+          description: 'The recipe is not in a state that allows a build to start. No build was started.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                recipe_not_configured:
+                  summary: The recipe has never been configured
+                  value:
+                    code: recipe_not_configured
+                    message: The recipe has no data sources or connections. Configure it with PUT first.
+                    details: {}
+                build_already_running:
+                  summary: A build of this recipe is already running
+                  value:
+                    code: build_already_running
+                    message: A build of this recipe is already running.
+                    details: {}
+                view_name_taken:
+                  summary: Another recipe has taken the output table name in the meantime
+                  value:
+                    code: view_name_taken
+                    message: The output table name is already used by another recipe.
+                    details:
+                      view_name: paid_media_spend_by_campaign
+                      conflicting_recipe_ids:
+                      - '12647075758935484399'
+        '500':
+          description: Something failed on our side. The request was not served; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                internal_error:
+                  value:
+                    code: internal_error
+                    message: An internal error occurred.
+                    details: {}
+        '503':
+          description: 'Temporarily unavailable. The response carries the header `Retry-After: 30`, so wait 30 seconds, re-read the recipe to see whether a build started after all, and only then repeat the request.
+
+            '
+          headers:
+            Retry-After:
+              description: How many seconds to wait before repeating the request. Always `30`.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                service_unavailable:
+                  value:
+                    code: service_unavailable
+                    message: The service is temporarily unavailable. Re-read the resource, then retry.
+                    details: {}
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3.1/automated-recipes/{recipe_id}/resetup/:
+    post:
+      operationId: api_v3_1_automated_recipes_resetup
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl -X POST 'https://embedded.improvado.io/api/v3.1/automated-recipes/12647075758935484548/resetup/' \\\n  -H \"Authorization: Bearer $TOKEN\"\n"
+      summary: Recreate a recipe from its template
+      description: 'Rebuilds the steps of an existing recipe from the current version of its template and starts a build of it, answering 202 straight away. The request has no body. Use it after the template has been changed in the interface, so a recipe deployed earlier picks the change up.
+
+
+        The configuration of the recipe is kept: data sources, connections, accounts and `sync_from_date` stay as they are, and so do the recipe identifier and the name of its output table. Nothing has to be sent again with `PUT`.
+
+
+        A build starts on its own, so no `POST .../build/` is needed afterwards. Poll `GET /api/v3.1/automated-recipes/{recipe_id}/` until `state` is `ready_to_work` or `failed`, as after any build.'
+      tags:
+      - Automated Recipes
+      parameters:
+      - in: path
+        name: recipe_id
+        schema:
+          type: string
+        required: true
+        description: Recipe identifier, as returned when the recipe was created. A string of digits.
+        examples:
+          recipe_resetup:
+            value: '12647075758935484548'
+      responses:
+        '202':
+          description: 'The recipe was recreated from its template and a build was accepted. The recipe comes back as it stands right now.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeV31'
+              examples:
+                resetup_started:
+                  summary: A recipe recreated from a changed template
+                  value:
+                    recipe_id: '12647075758935484548'
+                    template_id: 4021
+                    template_title: Paid media spend by campaign
+                    title: Paid media spend by campaign
+                    workspace_id: 5120
+                    state: extracting_data
+                    degraded: false
+                    not_delivered_reasons: []
+                    error: null
+                    datatable_id: 88214
+                    last_build_at: 2026-09-20 09:02:11+00:00
+                    created_at: 2026-09-17 12:03:55+00:00
+                    updated_at: 2026-09-20 09:02:11+00:00
+                    data_sources:
+                    - facebook
+                    - google_ads
+                    allowed_data_sources:
+                    - facebook
+                    - google_ads
+                    connections:
+                    - connection_id: 33120
+                      connection_data_source: facebook
+                      accounts:
+                      - id: 918204
+                    - connection_id: 33199
+                      connection_data_source: google_ads
+                      accounts:
+                      - id: 927710
+                    sync_from_date: 2026-01-01
+                    sources: []
+        '400':
+          description: 'The request could not be processed. `bad_request` is the catch-all code for a 4xx that has no code of its own, so the same envelope can arrive with another 4xx status, for example 415.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                bad_request:
+                  value:
+                    code: bad_request
+                    message: The request could not be processed.
+                    details: {}
+        '401':
+          description: The bearer token is missing, invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                authentication_failed:
+                  value:
+                    code: authentication_failed
+                    message: 'Authentication failed: the token is missing, invalid or expired.'
+                    details: {}
+        '403':
+          description: The caller is authenticated but this operation is not available to them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                permission_denied:
+                  value:
+                    code: permission_denied
+                    message: This operation is not available to you.
+                    details: {}
+        '404':
+          description: 'No such recipe in this workspace. The same answer covers a recipe of another workspace or agency, a recipe that was deleted and a recipe that is not managed through this API.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    message: Recipe not found.
+                    details: {}
+        '405':
+          description: The HTTP method is not supported on this path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                method_not_allowed:
+                  value:
+                    code: method_not_allowed
+                    message: Method not allowed.
+                    details: {}
+        '409':
+          description: 'The recipe or its template is not in a state that allows it to be recreated.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                recipe_not_configured:
+                  summary: The recipe has never been configured
+                  value:
+                    code: recipe_not_configured
+                    message: The recipe has no data sources or connections. Configure it with PUT first.
+                    details: {}
+                build_already_running:
+                  summary: A build of this recipe is already running
+                  description: '`details.recipe_updated` says how far this call got. `true` means the steps of the recipe were already recreated from the template and only the build was not started, so repeat this call once the running build has finished. `false`, or no `recipe_updated` at all, means nothing was changed.
+
+                    '
+                  value:
+                    code: build_already_running
+                    message: A build of this recipe is already running.
+                    details:
+                      recipe_updated: true
+                view_name_taken:
+                  summary: Another recipe has taken the output table name in the meantime
+                  value:
+                    code: view_name_taken
+                    message: The output table name is already used by another recipe.
+                    details:
+                      view_name: paid_media_spend_by_campaign
+                      conflicting_recipe_ids:
+                      - '12647075758935484399'
+                recipe_template_unavailable:
+                  summary: The template of this recipe can no longer be deployed
+                  value:
+                    code: recipe_template_unavailable
+                    message: The template of this recipe is no longer available.
+                    details: {}
+        '500':
+          description: Something failed on our side. The request was not served; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                internal_error:
+                  value:
+                    code: internal_error
+                    message: An internal error occurred.
+                    details: {}
+        '503':
+          description: 'Temporarily unavailable. The response carries the header `Retry-After: 30`, so wait 30 seconds, re-read the recipe to see whether it was recreated after all, and only then repeat the request.
+
+            '
+          headers:
+            Retry-After:
+              description: How many seconds to wait before repeating the request. Always `30`.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                service_unavailable:
+                  value:
+                    code: service_unavailable
+                    message: The service is temporarily unavailable. Re-read the resource, then retry.
+                    details: {}
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3.1/automated-recipes/{recipe_id}/extractions/:
+    get:
+      operationId: api_v3_1_automated_recipes_extractions
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl 'https://embedded.improvado.io/api/v3.1/automated-recipes/12647075758935484548/extractions/' \\\n  -H \"Authorization: Bearer $TOKEN\"\n"
+      summary: Check recipe extraction tables
+      description: 'Lists the extraction tables the recipe reads and says whether each of them exists in the destination of the workspace right now. The check runs against the destination on every call.
+
+
+        This answers "were the tables created", not "is the data ready". Readiness is the `state` of the recipe together with `degraded` and `sources`; a table can exist and still hold nothing useful. A data source whose extractions write into more than one table appears once per table, so key `tables` by `table`, not by `data_source`.
+
+
+        Use it when a build failed on missing data: if `all_tables_exist` is `false`, the extractions have not written anything yet and another build will fail the same way; if it is `true`, another build is worth starting.'
+      tags:
+      - Automated Recipes
+      parameters:
+      - in: path
+        name: recipe_id
+        schema:
+          type: string
+        required: true
+        description: Recipe identifier, as returned when the recipe was created. A string of digits.
+        examples:
+          recipe_extractions:
+            value: '12647075758935484548'
+      responses:
+        '200':
+          description: The extraction tables of the recipe and whether they exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeExtractionTablesV31'
+              examples:
+                tables_missing:
+                  summary: One table is still missing, so the recipe is not ready to build
+                  value:
+                    all_tables_exist: false
+                    tables:
+                    - data_source: facebook
+                      table: paid_media_spend_28340_facebook_all_data
+                      table_exists: true
+                      extraction_ids:
+                      - 5512043
+                      - 5512044
+                    - data_source: google_ads
+                      table: paid_media_spend_28341_google_ads_all_data
+                      table_exists: false
+                      extraction_ids:
+                      - 5512051
+        '400':
+          description: 'The request could not be processed. `bad_request` is the catch-all code for a 4xx that has no code of its own, so the same envelope can arrive with another 4xx status, for example 415.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                bad_request:
+                  value:
+                    code: bad_request
+                    message: The request could not be processed.
+                    details: {}
+        '401':
+          description: The bearer token is missing, invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                authentication_failed:
+                  value:
+                    code: authentication_failed
+                    message: 'Authentication failed: the token is missing, invalid or expired.'
+                    details: {}
+        '403':
+          description: The caller is authenticated but this operation is not available to them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                permission_denied:
+                  value:
+                    code: permission_denied
+                    message: This operation is not available to you.
+                    details: {}
+        '404':
+          description: 'No such recipe in this workspace. The same answer covers a recipe of another workspace or agency, a recipe that was deleted and a recipe that is not managed through this API.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    message: Recipe not found.
+                    details: {}
+        '405':
+          description: The HTTP method is not supported on this path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                method_not_allowed:
+                  value:
+                    code: method_not_allowed
+                    message: Method not allowed.
+                    details: {}
+        '409':
+          description: 'There is no destination to look the tables up in, so nothing could be checked.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                no_active_destination:
+                  summary: The workspace has no destination
+                  value:
+                    code: no_active_destination
+                    message: The workspace has no active destination.
+                    details: {}
+                destination_not_supported:
+                  summary: The destination of this workspace is not supported
+                  value:
+                    code: destination_not_supported
+                    message: The destination of this workspace is not supported.
+                    details: {}
+        '500':
+          description: Something failed on our side. The request was not served; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                internal_error:
+                  value:
+                    code: internal_error
+                    message: An internal error occurred.
+                    details: {}
+        '501':
+          description: 'The destination of this workspace cannot be asked whether a table exists. The recipe is fine; only this check is unavailable, so judge readiness by the `state` of the recipe together with `degraded` and `sources` instead. Repeating the call will not help.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                destination_check_unsupported:
+                  value:
+                    code: destination_check_unsupported
+                    message: The destination cannot check whether the tables exist.
+                    details: {}
+        '503':
+          description: 'Temporarily unavailable - either the service or the destination of the workspace. The response carries the header `Retry-After: 30`, so wait 30 seconds and repeat the request; nothing was changed.
+
+            '
+          headers:
+            Retry-After:
+              description: How many seconds to wait before repeating the request. Always `30`.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                destination_unavailable:
+                  summary: The destination of the workspace could not be queried
+                  value:
+                    code: destination_unavailable
+                    message: The destination could not be queried right now.
+                    details: {}
+                service_unavailable:
+                  value:
+                    code: service_unavailable
+                    message: The service is temporarily unavailable. Re-read the resource, then retry.
+                    details: {}
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+components:
+  schemas:
+    AutomatedRecipeTemplateTreeNode:
+      type: object
+      description: 'A template in the dependency tree. The detail response is itself the root node: it carries `level` and `children` directly rather than nesting them under a wrapper.
+
+        '
+      properties:
+        id:
+          type: integer
+          description: Template ID
+        title:
+          type: string
+          description: Template title
+        level:
+          type: integer
+          description: Depth in the tree, 0 for the template you requested
+        parent_id:
+          type: integer
+          description: 'Parent template ID. Present on every node inside `children`; the root object of the detail response carries no `parent_id` key at all.
+
+            '
+        children:
+          type: array
+          description: Direct children of this node, nested recursively to any depth
+          items:
+            $ref: '#/components/schemas/AutomatedRecipeTemplateTreeNode'
+    RecipeTemplateDetailV31:
+      type: object
+      description: 'A single recipe template with its dependency tree and the schema of the table it produces. Everything in the list item is here as well.
+
+        '
+      properties:
+        id:
+          type: integer
+          description: Template identifier. Pass it as `template_id` when you create a recipe.
+        title:
+          type: string
+          description: 'Template name. It can be changed in the interface, and the name in force when a recipe is created decides the name of that recipe''s output table.
+
+            '
+        description:
+          type: string
+          description: Template description, as entered in the interface. Can be empty.
+        data_sources:
+          type: array
+          description: 'Data sources this template supports. The `data_sources` you send when you configure a recipe must be taken from this list.
+
+            '
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: Data source name, for example `facebook`. Use this value in requests.
+              title:
+                type: string
+                description: Display name of the data source.
+        categories:
+          type: array
+          description: 'Categories the template is filed under in the interface, in display order. Empty when the template has none.
+
+            '
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: Category name.
+              title:
+                type: string
+                description: Display name of the category.
+        origin:
+          type: string
+          enum:
+          - improvado
+          - agency
+          description: 'Who the template comes from. `improvado` - a template we provide; `agency` - a template your agency created by promoting one of its own recipes. Agency templates are the ones the interface shows as custom. New values can be added, so tolerate unknown ones.
+
+            '
+        build_mode:
+          type: string
+          enum:
+          - progressive
+          - atomic
+          description: 'How a recipe from this template builds when one data source delivers no data. `progressive` - that data source is left out, the rest is built and the recipe becomes `ready_to_work` with `degraded: true`; if every data source fails, the recipe fails. `atomic` - a single failing data source fails the whole recipe. In both modes individual accounts that did not deliver never fail the recipe on their own. New values can be added, so tolerate unknown ones.
+
+            '
+        level:
+          type: integer
+          description: Depth of this template in its own tree; 0 for a template you can deploy.
+        children:
+          type: array
+          description: 'Templates this one is built on, nested to any depth. A recipe created from this template builds every node of the tree.
+
+            '
+          items:
+            $ref: '#/components/schemas/AutomatedRecipeTemplateTreeNode'
+        dependencies_count:
+          type: integer
+          description: How many templates this one depends on, counted over the whole tree.
+        output_columns:
+          type: array
+          description: 'Columns of the table a recipe from this template produces, available before you deploy anything. An empty list means the schema could not be read - treat it as unknown, not as "no columns".
+
+            '
+          items:
+            $ref: '#/components/schemas/AutomatedRecipeTemplateOutputColumn'
+        created_at:
+          type: string
+          format: date-time
+          description: When the template was created.
+        updated_at:
+          type: string
+          format: date-time
+          description: When the template was last changed.
+    RecipeV31:
+      type: object
+      description: 'A single recipe with its configuration and the outcome of its last build. A strict superset of the list item.
+
+        '
+      properties:
+        recipe_id:
+          type: string
+          description: Recipe identifier. A string, even though it is made of digits.
+        template_id:
+          type: integer
+          description: The template this recipe was created from.
+        template_title:
+          type: string
+          description: Current name of that template.
+        title:
+          type: string
+          description: 'Recipe name. When you create a recipe without a title, the template supplies the default.
+
+            '
+        workspace_id:
+          type: integer
+          description: The workspace this recipe lives in.
+        state:
+          type: string
+          enum:
+          - extracting_data
+          - building_dependencies
+          - ready_to_work
+          - failed
+          description: 'Where the recipe stands. `extracting_data` - data is being collected; `building_dependencies` - the tables are being built; `ready_to_work` - the last build finished and the output table can be queried; `failed` - the last build failed, see `error`. `ready_to_work` means built, not built completely: it is built from the extractions that delivered, and how complete that is shown by `degraded` and `sources`. New values can be added, so tolerate unknown ones.
+
+            '
+        degraded:
+          type:
+          - boolean
+          - 'null'
+          description: 'Whether the last build was incomplete. Only meaningful while `state` is `ready_to_work`: in every other state, a failed recipe and a running build included, it is `false`. `true` - the build left something out, either a whole data source or some extractions; see `not_delivered_reasons` and `sources`. `false` - everything in the build delivered. `null` - the completeness of the last build is unknown because that build ran before version 3.1.
+
+            '
+        not_delivered_reasons:
+          type: array
+          description: 'The distinct reasons behind an incomplete last build, sorted and deduplicated across all data sources. Empty when `degraded` is `false` or `null`.
+
+            '
+          items:
+            type: string
+            enum:
+            - connection_unavailable
+            - account_disabled
+            - permission_denied
+            - extraction_failing
+            - report_type_deprecated
+            - paused
+            - not_running
+            - timed_out
+            - unknown
+            - source_failed
+            description: 'The same values as `sources[].not_delivered[].reason`, plus `source_failed`, which means a whole data source dropped out of the build - look at `sources[].error` for that one. What to do about each reason is in [Deploying recipes](/recipes). New values can be added, so tolerate unknown ones.
+
+              '
+        error:
+          $ref: '#/components/schemas/RecipeBuildErrorV31'
+        datatable_id:
+          type:
+          - integer
+          - 'null'
+          description: 'The recipe''s output data table, or `null` while none is registered. Resolve the physical table name with GET /api/v3/data-tables/{data_table_id} instead of deriving it from a title.
+
+            '
+        last_build_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: 'When the last build of this recipe was started, no matter what started it. `null` means the recipe has never been built. For recipes last built before version 3.1 this is an approximation: the time the recipe record last changed, which is often the end of that build rather than its start.
+
+            '
+        created_at:
+          type: string
+          format: date-time
+          description: When the recipe was created.
+        updated_at:
+          type: string
+          format: date-time
+          description: 'When the recipe itself last changed. It says nothing about builds - for those use `last_build_at` and `state`.
+
+            '
+        data_sources:
+          type: array
+          description: 'Data source names the recipe is configured for, sorted. Empty on a recipe that has been created but not configured yet.
+
+            '
+          items:
+            type: string
+        allowed_data_sources:
+          type: array
+          description: 'Data source names the template allows, sorted. Everything in `data_sources` has to come from this list.
+
+            '
+          items:
+            type: string
+        connections:
+          type: array
+          description: 'The connections and accounts the recipe reads. This is the full set the recipe holds; configuring a recipe always sends the full set, and nothing can be taken away from it.
+
+            '
+          items:
+            type: object
+            properties:
+              connection_id:
+                type: integer
+                description: 'The connection, as numbered in this workspace. The same connector has a different `connection_id` in every workspace.
+
+                  '
+              connection_data_source:
+                type: string
+                description: Data source this connection belongs to, for example `facebook`.
+              accounts:
+                type: array
+                description: The accounts of this connection that the recipe reads.
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      description: 'Account identifier, the one the v3.1 connection accounts operation returns.
+
+                        '
+        sync_from_date:
+          type: string
+          format: date
+          description: 'The date the recipe collects data from. Always set in a response, even though it may be omitted from a configuration request.
+
+            '
+        sources:
+          type: array
+          description: 'What the last build did with each configured data source. One entry per name in `data_sources`.
+
+            '
+          items:
+            $ref: '#/components/schemas/RecipeSourceV31'
+    RecipeSourceV31:
+      type: object
+      description: 'What the last build did with one data source of the recipe. There is one entry for every data source in the recipe''s `data_sources`.
+
+        '
+      properties:
+        data_source:
+          type: string
+          description: Data source name, for example `facebook`.
+        status:
+          type: string
+          enum:
+          - queued
+          - extracting
+          - building
+          - ready
+          - failed
+          - not_built
+          description: 'How this data source ended up in the last build. `queued` - waiting to start; `extracting` - collecting data; `building` - building its tables; `ready` - built; `failed` - it did not build, see `error`; `not_built` - it was not part of the last build, because it was added to the configuration afterwards or because the recipe has never been built. Run a build to include it. New values can be added, so tolerate unknown ones.
+
+            '
+        error:
+          $ref: '#/components/schemas/RecipeBuildErrorV31'
+        not_delivered_count:
+          type: integer
+          description: 'How many extractions of this data source did not make it into the last build. This is the full number; `not_delivered` lists at most 100 of them.
+
+            '
+        not_delivered:
+          type: array
+          description: 'The extractions that did not make it into the last build, ordered by `account_id` and capped at 100 entries per data source. An empty list means everything this data source was waiting for delivered.
+
+            '
+          items:
+            type: object
+            properties:
+              extraction_id:
+                type: integer
+                description: 'The extraction that did not deliver. Look it up in the extractions API of the same workspace.
+
+                  '
+              account_id:
+                type: integer
+                description: 'The account the extraction belongs to. This is the same `id` you sent in `connections[].accounts[]` when you configured the recipe.
+
+                  '
+              reason:
+                type: string
+                enum:
+                - connection_unavailable
+                - account_disabled
+                - permission_denied
+                - extraction_failing
+                - report_type_deprecated
+                - paused
+                - not_running
+                - timed_out
+                - unknown
+                description: 'Why it did not deliver. `connection_unavailable` - the connection has to be reconnected; `account_disabled` - the account is switched off; `permission_denied` - access to the account was withdrawn on the platform; `extraction_failing` - the extraction keeps failing on the platform; `report_type_deprecated` - the platform retired this report; `paused` - the extraction is paused; `not_running` - a reused extraction is not running; `timed_out` - it did not deliver within the window the build waits; `unknown` - none of the above. What to do about each is in [Deploying recipes](/recipes). New values can be added, so tolerate unknown ones.
+
+                  '
+    RecipeExtractionTablesV31:
+      type: object
+      description: 'The extraction tables a recipe reads and whether they exist in your workspace destination yet. This answers "were the tables created", not "is the data ready".
+
+        '
+      properties:
+        all_tables_exist:
+          type: boolean
+          description: '`true` only when `tables` is not empty and every table in it exists right now. It does not mean the data is complete: for that read the recipe''s `state`, `degraded` and `sources`.
+
+            '
+        tables:
+          type: array
+          description: 'One entry per extraction table the recipe reads. A data source with more than one table appears once per table, so key this list by `table`, not by `data_source`. Empty when the recipe reads no extraction tables yet.
+
+            '
+          items:
+            type: object
+            properties:
+              data_source:
+                type: string
+                description: Data source name, for example `facebook`.
+              table:
+                type: string
+                description: Name of the extraction table in the workspace destination.
+              table_exists:
+                type: boolean
+                description: Whether that table exists in the destination right now.
+              extraction_ids:
+                type: array
+                description: 'The extractions the last build used for this data source - the ones it created and the existing ones it reused. Empty before the first build.
+
+                  '
+                items:
+                  type: integer
+    RecipeTemplatePageV31:
+      type: object
+      description: One page of recipe templates.
+      properties:
+        count:
+          type: integer
+          description: Total number of templates matching the request.
+        next:
+          type:
+          - string
+          - 'null'
+          description: Full URL of the next page, or `null` on the last page.
+        previous:
+          type:
+          - string
+          - 'null'
+          description: Full URL of the previous page, or `null` on the first page.
+        results:
+          type: array
+          description: Templates on this page.
+          items:
+            $ref: '#/components/schemas/RecipeTemplateV31'
+    RecipeListItemV31:
+      type: object
+      description: 'A recipe as it appears in the v3.1 recipe list. The recipe detail returns every field below and adds the configuration and the per-data-source breakdown.
+
+        '
+      properties:
+        recipe_id:
+          type: string
+          description: Recipe identifier. A string, even though it is made of digits.
+        template_id:
+          type: integer
+          description: The template this recipe was created from.
+        template_title:
+          type: string
+          description: Current name of that template.
+        title:
+          type: string
+          description: 'Recipe name. When you create a recipe without a title, the template supplies the default.
+
+            '
+        workspace_id:
+          type: integer
+          description: The workspace this recipe lives in.
+        state:
+          type: string
+          enum:
+          - extracting_data
+          - building_dependencies
+          - ready_to_work
+          - failed
+          description: 'Where the recipe stands. `extracting_data` - data is being collected; `building_dependencies` - the tables are being built; `ready_to_work` - the last build finished and the output table can be queried; `failed` - the last build failed, see `error`. `ready_to_work` means built, not built completely: it is built from the extractions that delivered, and how complete that is shown by `degraded` and `sources`. New values can be added, so tolerate unknown ones.
+
+            '
+        degraded:
+          type:
+          - boolean
+          - 'null'
+          description: 'Whether the last build was incomplete. Only meaningful while `state` is `ready_to_work`: in every other state, a failed recipe and a running build included, it is `false`. `true` - the build left something out, either a whole data source or some extractions; see `not_delivered_reasons` and `sources`. `false` - everything in the build delivered. `null` - the completeness of the last build is unknown because that build ran before version 3.1.
+
+            '
+        not_delivered_reasons:
+          type: array
+          description: 'The distinct reasons behind an incomplete last build, sorted and deduplicated across all data sources, so that you can triage a fleet of recipes from the list alone. Empty when `degraded` is `false` or `null`.
+
+            '
+          items:
+            type: string
+            enum:
+            - connection_unavailable
+            - account_disabled
+            - permission_denied
+            - extraction_failing
+            - report_type_deprecated
+            - paused
+            - not_running
+            - timed_out
+            - unknown
+            - source_failed
+            description: 'The same values as `sources[].not_delivered[].reason`, plus `source_failed`, which means a whole data source dropped out of the build - look at `sources[].error` for that one. What to do about each reason is in [Deploying recipes](/recipes). New values can be added, so tolerate unknown ones.
+
+              '
+        error:
+          $ref: '#/components/schemas/RecipeBuildErrorV31'
+        datatable_id:
+          type:
+          - integer
+          - 'null'
+          description: 'The recipe''s output data table, or `null` while none is registered. Resolve the physical table name with GET /api/v3/data-tables/{data_table_id} instead of deriving it from a title.
+
+            '
+        last_build_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: 'When the last build of this recipe was started, no matter what started it. `null` means the recipe has never been built. For recipes last built before version 3.1 this is an approximation: the time the recipe record last changed, which is often the end of that build rather than its start.
+
+            '
+        created_at:
+          type: string
+          format: date-time
+          description: When the recipe was created.
+        updated_at:
+          type: string
+          format: date-time
+          description: 'When the recipe itself last changed. It says nothing about builds - for those use `last_build_at` and `state`.
+
+            '
+    RecipePageV31:
+      type: object
+      description: One page of recipes.
+      properties:
+        count:
+          type: integer
+          description: Total number of recipes matching the request.
+        next:
+          type:
+          - string
+          - 'null'
+          description: Full URL of the next page, or `null` on the last page.
+        previous:
+          type:
+          - string
+          - 'null'
+          description: Full URL of the previous page, or `null` on the first page.
+        results:
+          type: array
+          description: Recipes on this page.
+          items:
+            $ref: '#/components/schemas/RecipeListItemV31'
+    AutomatedRecipeTemplateOutputColumn:
+      type: object
+      description: One column of the table this template produces.
+      properties:
+        name:
+          type: string
+          description: Column name in the output table
+        type:
+          type: string
+          enum:
+          - string
+          - number
+          - bool
+          - date
+          - datetime
+          description: Physical column type
+        user_kind:
+          type: string
+          enum:
+          - dimension
+          - metric
+          - date_key
+          description: 'How the column is used in reporting. Derived from `type`: string and datetime are dimensions, number and bool are metrics, date is the date key.
+
+            '
+    RecipeBuildErrorV31:
+      type:
+      - object
+      - 'null'
+      description: 'Why a build failed. On a recipe this is not `null` if and only if `state` is `failed`; on an entry of `sources` it is not `null` if and only if that entry''s `status` is `failed`. Build error codes are a namespace of their own, separate from the codes of HTTP error responses - a few names appear in both. The catalogue is on the [Errors](/errors) page.
+
+        '
+      properties:
+        code:
+          type: string
+          description: 'Machine-readable build error code, for example `no_data_delivered` or `sql_object_not_found`. Branch on this, never on the message. New codes can be added, so tolerate unknown ones.
+
+            '
+        message:
+          type: string
+          description: 'Public human-readable text: a fixed sentence for our own codes, and the cleaned-up message of the database for SQL failures. It never carries raw internal output, and its wording is not part of the contract.
+
+            '
+        stage:
+          type:
+          - string
+          - 'null'
+          enum:
+          - extraction
+          - transformation_build
+          - final_build
+          - null
+          description: 'Which phase of the build failed: `extraction` while data was being collected, `transformation_build` while an intermediate step was built, `final_build` while the output table was built. `null` when the failure was recorded without a phase.
+
+            '
+        data_source:
+          type:
+          - string
+          - 'null'
+          description: 'The data source this failure belongs to, or `null` when it belongs to no single one. Inside `sources` it always matches that entry''s `data_source`.
+
+            '
+        occurred_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: When the failure was recorded, or `null` when no time was stored with it.
+        details:
+          type: object
+          description: 'Extra data for this code, always an object; `{}` for codes that carry none. See [Errors](/errors) for the shape per code.
+
+            '
+    RecipeTemplateV31:
+      type: object
+      description: 'A recipe template as it appears in the v3.1 template list. A template is the blueprint a recipe is deployed from; it belongs to your agency and the same `id` can be deployed in every workspace of that agency.
+
+        '
+      properties:
+        id:
+          type: integer
+          description: Template identifier. Pass it as `template_id` when you create a recipe.
+        title:
+          type: string
+          description: 'Template name. It can be changed in the interface, and the name in force when a recipe is created decides the name of that recipe''s output table.
+
+            '
+        description:
+          type: string
+          description: Template description, as entered in the interface. Can be empty.
+        data_sources:
+          type: array
+          description: 'Data sources this template supports. The `data_sources` you send when you configure a recipe must be taken from this list.
+
+            '
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: Data source name, for example `facebook`. Use this value in requests.
+              title:
+                type: string
+                description: Display name of the data source.
+        categories:
+          type: array
+          description: 'Categories the template is filed under in the interface, in display order. Empty when the template has none.
+
+            '
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: Category name.
+              title:
+                type: string
+                description: Display name of the category.
+        origin:
+          type: string
+          enum:
+          - improvado
+          - agency
+          description: 'Who the template comes from. `improvado` - a template we provide; `agency` - a template your agency created by promoting one of its own recipes. Agency templates are the ones the interface shows as custom. New values can be added, so tolerate unknown ones.
+
+            '
+        build_mode:
+          type: string
+          enum:
+          - progressive
+          - atomic
+          description: 'How a recipe from this template builds when one data source delivers no data. `progressive` - that data source is left out, the rest is built and the recipe becomes `ready_to_work` with `degraded: true`; if every data source fails, the recipe fails. `atomic` - a single failing data source fails the whole recipe. In both modes individual accounts that did not deliver never fail the recipe on their own. New values can be added, so tolerate unknown ones.
+
+            '
+        created_at:
+          type: string
+          format: date-time
+          description: When the template was created.
+        updated_at:
+          type: string
+          format: date-time
+          description: When the template was last changed.
+    ErrorEnvelope:
+      type: object
+      description: 'The error body of every v3.1 automated recipe operation and of the v3.1 connection accounts operation. All three fields are always present. See [Errors](/errors) for the full catalogue of codes.
+
+        '
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code. Branch on this, never on the message.
+        message:
+          type: string
+          description: Human-readable text. Wording may change; it is not part of the contract.
+        details:
+          type: object
+          description: 'Always present, always an object. Its shape depends on the code; codes that carry no extra data return an empty object. See [Errors](/errors).
+
+            '
+      required:
+      - code
+      - message
+      - details
+      examples:
+      - not_found:
+          value:
+            code: not_found
+            message: Recipe not found.
+            details: {}
+      - invalid_query_parameter:
+          value:
+            code: invalid_query_parameter
+            message: A query parameter has an invalid value.
+            details:
+              parameter: state
+              allowed_values:
+              - extracting_data
+              - building_dependencies
+              - ready_to_work
+              - failed
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    tokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Bearer
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: dts_session_id
+      description: Cookie authentication. When using this method, the HTTP_X_IM_WORKSPACE_ID header must be included with the workspace_id (integer) value.

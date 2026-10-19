@@ -1,0 +1,870 @@
+openapi: 3.2.0
+info:
+  title: Improvado Embedded API v3 Data source connections API
+  version: 3.0.0
+  description: 'Improvado Embedded API V3 provides programmatic access to data extraction, transformation, and loading capabilities.
+
+
+    ## Authentication
+
+
+    This API supports multiple authentication methods depending on the endpoint:
+
+
+    ### Basic Authentication
+
+    Used for workspace-agnostic operations such as:
+
+    - Creating access tokens (`POST /api/v3/token`)
+
+    - Listing workspaces (`GET /api/v3/workspaces`)
+
+    - Managing workspaces (`POST /api/v3/workspaces`, `GET /api/v3/workspaces/{id}`, `PUT /api/v3/workspaces/{id}`)
+
+    - Getting iframe URLs (`POST /api/v3/get_iframe_url`)
+
+    - Listing available recipes (`GET /api/v3/recipes/`)
+
+    etc.
+
+
+    **Format**: `Authorization: Basic `
+
+
+    ### Bearer Token Authentication
+
+    Used for workspace-scoped operations after obtaining a token from `/api/v3/token`. The token is scoped to a specific workspace.
+
+
+    **Format**: `Authorization: Bearer `
+
+
+    ### Cookie Authentication
+
+    Alternative to Bearer token for browser-based integrations. When using cookie authentication, you must include the workspace ID in the request header.
+
+
+    **Cookie**: `dts_session_id=`
+
+
+    **Required Header**: `X-IM-WORKSPACE-ID: `
+
+
+    ## Workspace Scoping
+
+
+    Most API operations are workspace-scoped. After authenticating with Basic Auth, obtain a workspace-specific token using `POST /api/v3/token` with the desired `workspace_id`. This token provides access only to resources within that workspace, ensuring isolation between different customers or projects.
+
+
+    ## Errors
+
+
+    The automated recipe operations under `/api/v3.1/automated-recipe*` and
+
+    `GET /api/v3.1/connections/{connection_id}/accounts/` return errors as
+
+    `{"code": "...", "message": "...", "details": {...}}`. Branch on `code`, never on the
+
+    message text. See Errors for the catalogue of codes and the shape of `details`.
+
+
+    All other operations return errors as `{"detail": "error description"}`.'
+servers:
+- url: https://embedded.improvado.io
+tags:
+- name: Data source connections
+  x-zudoku-collapsed: true
+  description: 'Manage connections to data sources for authentication and data access.
+
+
+    Connections handle authentication with data sources and maintain the credentials needed for data extraction.
+
+    Connections are typically created through the iframe UI, where users can:
+
+    - Provide username/password credentials
+
+    - Complete OAuth flows
+
+    - Configure additional connection parameters
+
+
+    Connection lifecycle:
+
+    1. Create connection via iframe (provides OAuth or credential input)
+
+    2. Validate connection status
+
+    3. Use connection to create extracts
+
+    4. Monitor connection health and refresh tokens as needed'
+paths:
+  /api/v3/datasources/{datasource_name}/connections:
+    get:
+      operationId: api_v3_datasource_connections_list
+      summary: List data source connections
+      description: Returns list of connections within workspace by data source
+      tags:
+      - Data source connections
+      parameters:
+      - in: path
+        name: datasource_name
+        schema:
+          type: string
+        required: true
+        description: Data source name
+        examples:
+          datasource_connections_list:
+            value:
+              datasource_name: google_sheets
+          wrong_datasource_name:
+            value:
+              datasource_name: wrong_name
+      responses:
+        '200':
+          description: Get a list of Connections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaginatedConnectionsList'
+              examples:
+                connections_list:
+                  value:
+                    count: 2
+                    next: null
+                    previous: null
+                    results:
+                    - id: 1
+                      uid: 12345678-1234-5678-1234-567812345678
+                      title: Connection 1
+                      datasource_name: google_sheets
+                      status: active
+                      created_at: 2021-01-01 00:00:00+00:00
+                      updated_at: 2021-01-01 00:00:00+00:00
+                      accounts_number: 5
+                      enabled_for_extraction_accounts_number: 3
+                      accounts_status: active
+                      update_accounts_last_successed: 2021-01-01 00:00:00+00:00
+                      update_accounts_was_successfull: true
+                    - id: 2
+                      uid: 12345678-1234-5678-1234-567812345678
+                      title: Connection 2
+                      datasource_name: google_ads
+                      status: active
+                      created_at: 2021-01-01 00:00:00+00:00
+                      updated_at: 2021-01-01 00:00:00+00:00
+                      accounts_number: 4
+                      enabled_for_extraction_accounts_number: 0
+                      accounts_status: active
+                      update_accounts_last_successed: 2021-01-01 00:00:00+00:00
+                      update_accounts_was_successfull: true
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_datasource_name:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/datasources/{datasource_name}/connections/{id}:
+    delete:
+      operationId: api_v3_datasource_connection_delete
+      summary: Delete a connection
+      description: Delete specified connection. Also related accounts are marked as inactive (is_active property becomes false) and related extractions are paused.
+      tags:
+      - Data source connections
+      parameters:
+      - in: path
+        name: datasource_name
+        schema:
+          type: string
+        required: true
+        description: Datasource name
+        examples:
+          datasource_connection_delete:
+            value:
+              datasource_name: google_sheets
+          wrong_datasource_name:
+            value:
+              datasource_name: wrong_name
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Connection ID
+        examples:
+          datasource_connection_delete:
+            value:
+              id: 1
+          wrong_datasource_name:
+            value:
+              id: 1
+      responses:
+        '204':
+          description: Delete a Connection
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_datasource_name:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Connection not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/datasources/{datasource_name}/external-auth-links:
+    post:
+      operationId: api_v3_datasource_external_auth_links_create
+      summary: Generate external authentication links
+      description: 'Generates one-time links that let an external user (for example, the end client of an agency)
+
+        authenticate a data source connection with their own credentials and select which accounts to
+
+        grant — without having access to the workspace. This is the API equivalent of the platform UI
+
+        action "Request credentials from another user".
+
+
+        One link is generated per email in `to_emails`; the email identifies the external user.
+
+        Links are single-use, expire after 14 days, and can be revoked.
+
+
+        **Who the link comes from.** An API token does not identify a person, so pass `requested_by`
+
+        with the email of the user the link is sent on behalf of. That user is shown as the sender on
+
+        the link page and in the invitation email, and receives the confirmation email once the
+
+        external user creates the connection. `requested_by` must be an active user of your agency
+
+        who is a member of the workspace or an owner of the agency; otherwise the request fails with
+
+        `400` and no links are created. Without `requested_by`, the link page and the invitation
+
+        show your whitelabel title, and no confirmation email is sent.
+
+
+        > **Important:** Requires the agency feature flag for external authentication links
+
+        > (contact Improvado to enable it). The endpoint returns `403` when the flag is disabled.'
+      tags:
+      - Data source connections
+      parameters:
+      - in: path
+        name: datasource_name
+        schema:
+          type: string
+        required: true
+        description: Data source name
+        examples:
+          external_auth_links_create:
+            value:
+              datasource_name: google_ads
+          wrong_datasource_name:
+            value:
+              datasource_name: wrong_name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalAuthLinksCreateRequest'
+            examples:
+              create_links:
+                value:
+                  to_emails:
+                  - client@example.com
+                  send_email: true
+              create_links_on_behalf_of_a_user:
+                value:
+                  to_emails:
+                  - client@example.com
+                  send_email: true
+                  requested_by: account.manager@agency.com
+      responses:
+        '201':
+          description: External authentication links generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalAuthLinksCreateResponse'
+              examples:
+                created:
+                  value:
+                    links:
+                    - email: client@example.com
+                      link: https://app.improvado.io/login#token=8f14e45fceea167a5a36dedd4bea2543
+                      expires_at: 2026-07-28 12:00:00+00:00
+                    failed_emails: []
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_email:
+                  value:
+                    to_emails:
+                    - Enter a valid email address.
+                wrong_datasource_name:
+                  value:
+                    detail: Data source does not exist
+                requested_by_not_allowed:
+                  value:
+                    detail: requested_by must be an active user of this workspace or an owner of the agency
+                requested_by_not_an_email:
+                  value:
+                    requested_by:
+                    - Enter a valid email address.
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '403':
+          description: External authentication links are not enabled for this agency. Contact Improvado to enable the feature.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                feature_disabled:
+                  value:
+                    detail: Functionality of creating connection external auth link is not available for agency
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    get:
+      operationId: api_v3_datasource_external_auth_links_list
+      summary: List external authentication links
+      description: 'Lists the external authentication links generated for this data source in the current
+
+        workspace, newest first. Each link carries its current status: `not_used`, `used`,
+
+        `expired`, or `revoked_manually`. An unknown `datasource_name` yields an empty list.'
+      tags:
+      - Data source connections
+      parameters:
+      - in: path
+        name: datasource_name
+        schema:
+          type: string
+        required: true
+        description: Data source name
+        examples:
+          external_auth_links_list:
+            value:
+              datasource_name: google_ads
+      - in: query
+        name: page
+        schema:
+          type: integer
+        required: false
+        description: Page number
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+          default: 100
+          maximum: 1000
+        required: false
+        description: Number of items per page (max 1000)
+      responses:
+        '200':
+          description: External authentication links
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedExternalAuthLinkList'
+              examples:
+                external_auth_links_list:
+                  value:
+                    count: 1
+                    next: null
+                    previous: null
+                    results:
+                    - id: 42
+                      data_source: google_ads
+                      data_source_title: Google Ads
+                      status: not_used
+                      created_at: 2026-07-14 12:00:00+00:00
+                      sent_to_email: client@example.com
+                      sender: user@agency.com
+                      revoked_at: null
+                      revoked_by: ''
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/datasources/{datasource_name}/external-auth-links/{id}/revoke:
+    post:
+      operationId: api_v3_datasource_external_auth_links_revoke
+      summary: Revoke an external authentication link
+      description: 'Revokes a not-yet-used external authentication link so it can no longer be used to
+
+        authenticate. Idempotent — revoking an already-revoked link returns `200` with the
+
+        existing revocation data. Returns `400` if the link was already used or has expired.'
+      tags:
+      - Data source connections
+      parameters:
+      - in: path
+        name: datasource_name
+        schema:
+          type: string
+        required: true
+        description: Data source name
+        examples:
+          external_auth_link_revoke:
+            value:
+              datasource_name: google_ads
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: External authentication link ID
+        examples:
+          external_auth_link_revoke:
+            value:
+              id: 42
+      responses:
+        '200':
+          description: Link revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalAuthLinkListItem'
+              examples:
+                external_auth_link_revoke:
+                  value:
+                    id: 42
+                    data_source: google_ads
+                    data_source_title: Google Ads
+                    status: revoked_manually
+                    created_at: 2026-07-14 12:00:00+00:00
+                    sent_to_email: client@example.com
+                    sender: user@agency.com
+                    revoked_at: 2026-07-15 09:30:00+00:00
+                    revoked_by: user@agency.com
+        '400':
+          description: Link already used or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                already_used:
+                  value:
+                    detail: External auth link already used
+                expired:
+                  value:
+                    detail: External auth link expired
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Link not found — the ID does not exist within this data source and workspace (including an unknown `datasource_name`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Not found.
+                wrong_datasource_name:
+                  value:
+                    detail: Not found.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/connections/{connection_id}:
+    delete:
+      operationId: api_v3_connection_delete
+      summary: Delete a connection
+      description: Delete specified connection. Also related accounts are marked as inactive (is_active property becomes false) and related extractions are paused.
+      tags:
+      - Data source connections
+      parameters:
+      - in: path
+        name: connection_id
+        schema:
+          type: integer
+        required: true
+        description: Connection ID
+        examples:
+          connection_accounts_list:
+            value:
+              connection_id: 1
+          wrong_connection_id:
+            value:
+              connection_id: 999
+      responses:
+        '204':
+          description: Delete a Connection
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Connection not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+components:
+  schemas:
+    ExternalAuthLink:
+      type: object
+      description: A generated external authentication link
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email of the external user the link was generated for
+        link:
+          type: string
+          format: uri
+          description: One-time authentication link to share with the external user
+        expires_at:
+          type: string
+          format: date-time
+          description: Timestamp when the link expires (14 days after creation)
+      required:
+      - email
+      - link
+      - expires_at
+    ErrorResponse:
+      type: object
+      description: Error response object
+      properties:
+        detail:
+          type: string
+          description: Error message
+      examples:
+      - no_auth:
+          value:
+            detail: You do not have permission to perform this action.
+      - invalid_request:
+          value:
+            detail: Invalid request
+      - not_uniq_name:
+          value:
+            detail: Workspace with this title already exists
+    PaginatedConnectionsList:
+      type: object
+      description: connection list
+      properties:
+        count:
+          type: integer
+          description: Number of connections
+        next:
+          type: string
+          description: URL to the next page
+        previous:
+          type: string
+          description: URL to the previous page
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Connection'
+      examples:
+      - connections_list:
+          value:
+            count: 2
+            next: null
+            previous: null
+            results:
+            - id: 1
+              uid: 12345678-1234-5678-1234-567812345678
+              title: Connection 1
+              datasource_name: google_sheets
+              status: active
+              created_at: 2021-01-01 00:00:00+00:00
+              updated_at: 2021-01-01 00:00:00+00:00
+              accounts_number: 5
+              enabled_for_extraction_accounts_number: 3
+              accounts_status: active
+              update_accounts_last_successed: 2021-01-01 00:00:00+00:00
+              update_accounts_was_successfull: true
+            - id: 2
+              uid: 12345678-1234-5678-1234-567812345678
+              title: Connection 2
+              datasource_name: google_ads
+              status: active
+              created_at: 2021-01-01 00:00:00+00:00
+              updated_at: 2021-01-01 00:00:00+00:00
+              accounts_number: 4
+              enabled_for_extraction_accounts_number: 0
+              accounts_status: active
+              update_accounts_last_successed: 2021-01-01 00:00:00+00:00
+              update_accounts_was_successfull: true
+    ExternalAuthLinkListItem:
+      type: object
+      description: An external authentication link with its current status
+      properties:
+        id:
+          type: integer
+          description: External authentication link ID
+        data_source:
+          type: string
+          description: Data source name
+        data_source_title:
+          type: string
+          description: Human-readable data source title
+        status:
+          type: string
+          enum:
+          - not_used
+          - used
+          - expired
+          - revoked_manually
+          description: Current status of the link
+        created_at:
+          type: string
+          format: date-time
+          description: When the link was generated
+        sent_to_email:
+          type: string
+          format: email
+          description: Email of the external user the link was generated for
+        sender:
+          type: string
+          format: email
+          description: Email of the user who generated the link
+        revoked_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: When the link was revoked, if it was
+        revoked_by:
+          type: string
+          description: Email of the user who revoked the link; empty string if not revoked
+    PaginatedExternalAuthLinkList:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Number of external authentication links
+        next:
+          type: string
+          description: URL to the next page
+        previous:
+          type: string
+          description: URL to the previous page
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalAuthLinkListItem'
+    ExternalAuthLinksCreateResponse:
+      type: object
+      properties:
+        links:
+          type: array
+          description: Generated links, one per successfully processed email
+          items:
+            $ref: '#/components/schemas/ExternalAuthLink'
+        failed_emails:
+          type: array
+          description: Emails for which link creation failed
+          items:
+            type: string
+            format: email
+      required:
+      - links
+      - failed_emails
+    Connection:
+      type: object
+      description: Connection object
+      properties:
+        id:
+          type: integer
+          description: Connection ID
+        uid:
+          type: string
+          description: Connection UID
+        title:
+          type: string
+          description: Connection title
+        datasource_name:
+          type: string
+          description: Data source name
+        status:
+          type: string
+          description: Connection status
+        created_at:
+          type: string
+          description: Connection creation date
+        updated_at:
+          type: string
+          description: Connection update date
+        accounts_number:
+          type: integer
+          description: Total number of accounts available on this connection (excluding accounts disabled on the data source side).
+        enabled_for_extraction_accounts_number:
+          type: integer
+          description: Number of accounts on this connection that are selected for extraction. Use this to detect connections that have no accounts enabled and prompt the user to select at least one before setting up extractions or loads.
+        accounts_status:
+          type: string
+          description: Accounts status
+        update_accounts_last_successed:
+          type: string
+          description: Last successful accounts update date
+        update_accounts_was_successfull:
+          type: boolean
+          description: Was the last accounts update successful
+      examples:
+      - connection:
+          value:
+            id: 1
+            uid: 12345678-1234-5678-1234-567812345678
+            title: Connection 1
+            datasource_name: google_sheets
+            status: active
+            created_at: 2021-01-01 00:00:00+00:00
+            updated_at: 2021-01-01 00:00:00+00:00
+            accounts_number: 5
+            enabled_for_extraction_accounts_number: 3
+            accounts_status: active
+            update_accounts_last_successed: 2021-01-01 00:00:00+00:00
+            update_accounts_was_successfull: true
+    ExternalAuthLinksCreateRequest:
+      type: object
+      required:
+      - to_emails
+      properties:
+        to_emails:
+          type: array
+          minItems: 1
+          maxItems: 100
+          description: 'Email addresses of the external users to generate links for. One link is generated
+
+            per email; the email identifies the external user.
+
+            '
+          items:
+            type: string
+            format: email
+        send_email:
+          type: boolean
+          default: true
+          description: 'When `true` (default), Improvado also emails the generated link to each recipient.
+
+            Set to `false` to deliver the links yourself.
+
+            '
+        requested_by:
+          type: string
+          format: email
+          description: 'Email of the user the links are sent on behalf of. Must be an active user of your agency
+
+            who is a member of the workspace or an owner of the agency; any other value is rejected
+
+            with `400`. The user is shown as the sender on the link page and in the invitation email,
+
+            and receives the confirmation email once the connection is created. The confirmation is
+
+            skipped if the user has lost access to the workspace by then.
+
+
+            When omitted, the link page and the invitation show your whitelabel title instead of a
+
+            person, and no confirmation email is sent.
+
+            '
+          examples:
+          - account.manager@agency.com
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    tokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Bearer
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: dts_session_id
+      description: Cookie authentication. When using this method, the HTTP_X_IM_WORKSPACE_ID header must be included with the workspace_id (integer) value.

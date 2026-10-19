@@ -1,0 +1,1494 @@
+openapi: 3.2.0
+info:
+  title: Improvado Embedded API v3 Extraction templates API
+  version: 3.0.0
+  description: 'Improvado Embedded API V3 provides programmatic access to data extraction, transformation, and loading capabilities.
+
+
+    ## Authentication
+
+
+    This API supports multiple authentication methods depending on the endpoint:
+
+
+    ### Basic Authentication
+
+    Used for workspace-agnostic operations such as:
+
+    - Creating access tokens (`POST /api/v3/token`)
+
+    - Listing workspaces (`GET /api/v3/workspaces`)
+
+    - Managing workspaces (`POST /api/v3/workspaces`, `GET /api/v3/workspaces/{id}`, `PUT /api/v3/workspaces/{id}`)
+
+    - Getting iframe URLs (`POST /api/v3/get_iframe_url`)
+
+    - Listing available recipes (`GET /api/v3/recipes/`)
+
+    etc.
+
+
+    **Format**: `Authorization: Basic `
+
+
+    ### Bearer Token Authentication
+
+    Used for workspace-scoped operations after obtaining a token from `/api/v3/token`. The token is scoped to a specific workspace.
+
+
+    **Format**: `Authorization: Bearer `
+
+
+    ### Cookie Authentication
+
+    Alternative to Bearer token for browser-based integrations. When using cookie authentication, you must include the workspace ID in the request header.
+
+
+    **Cookie**: `dts_session_id=`
+
+
+    **Required Header**: `X-IM-WORKSPACE-ID: `
+
+
+    ## Workspace Scoping
+
+
+    Most API operations are workspace-scoped. After authenticating with Basic Auth, obtain a workspace-specific token using `POST /api/v3/token` with the desired `workspace_id`. This token provides access only to resources within that workspace, ensuring isolation between different customers or projects.
+
+
+    ## Errors
+
+
+    The automated recipe operations under `/api/v3.1/automated-recipe*` and
+
+    `GET /api/v3.1/connections/{connection_id}/accounts/` return errors as
+
+    `{"code": "...", "message": "...", "details": {...}}`. Branch on `code`, never on the
+
+    message text. See Errors for the catalogue of codes and the shape of `details`.
+
+
+    All other operations return errors as `{"detail": "error description"}`.'
+servers:
+- url: https://embedded.improvado.io
+tags:
+- name: Extraction templates
+  x-zudoku-collapsed: true
+  description: 'Work with predefined templates that define what data to extract from a data source.
+
+
+    Extract templates are blueprints that specify:
+
+    - Available fields from a data source
+
+    - Default extraction settings and parameters
+
+    - Supported date ranges and filters
+
+
+    Global templates are created and maintained by Improvado. When you create an extract, you select a template
+
+    and optionally customize its settings for your specific use case.'
+paths:
+  /api/v3/datasources/{datasource_name}/extract-templates:
+    get:
+      operationId: api_v3_datasource_extract_templates_list
+      summary: List extraction templates for a datasource
+      description: List extraction templates available for datasource
+      tags:
+      - Extraction templates
+      parameters:
+      - in: path
+        name: datasource_name
+        schema:
+          type: string
+        required: true
+        description: Datasource name
+        examples:
+          datasource_extract_templates_list:
+            value:
+              datasource_name: google_sheets
+          wrong_datasource_name:
+            value:
+              datasource_name: wrong_name
+      responses:
+        '200':
+          description: Get a list of extraction templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaginatedExtractTemplateList'
+              examples:
+                extract_templates_list:
+                  value:
+                    count: 2
+                    next: null
+                    previous: null
+                    results:
+                    - id: 1
+                      title: Extract Template 1
+                      description: Extract Template 1 description
+                      data_class: table
+                      labels:
+                      - color: magenta
+                        name: Label 1
+                      datasource_name: google_sheets
+                    - id: 2
+                      title: Extract Template 2
+                      description: Extract Template 2 description
+                      data_class: table
+                      labels:
+                      - color: magenta
+                        name: Label 1
+                      datasource_name: google_ads
+        '400':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_datasource_name:
+                  value:
+                    detail: Data source not found
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    post:
+      operationId: api_v3_datasource_extract_templates_create
+      summary: Create an extraction template
+      description: 'Create a custom (agency-level) extraction template based on a parent global template.
+
+
+        For wide report templates (parent has `allow_to_select_dimensions` or `is_created_from_wide`),
+
+        a `connection_id` is required and the selected fields are validated against the DSAS API.
+
+
+        Required RBAC permission: `EXTRACT.CREATE`.'
+      tags:
+      - Extraction templates
+      parameters:
+      - in: path
+        name: datasource_name
+        schema:
+          type: string
+        required: true
+        description: Datasource name
+        examples:
+          create_template:
+            value: act_on
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractTemplateCreateRequest'
+            examples:
+              basic_template:
+                summary: Create a basic template
+                value:
+                  parent_id: 123
+                  title: My Custom Template
+                  description: Custom template for daily extraction
+                  fields:
+                  - impressions
+                  - clicks
+                  - spend
+                  scheduling:
+                  - hours: 6
+                    minutes: 0
+                    timezone: UTC
+                    interval: day
+                    lookback_window:
+                      name: default
+                  additional_params: {}
+              wide_template:
+                summary: Create a wide report template (requires connection_id)
+                value:
+                  parent_id: 456
+                  title: Wide Report Template
+                  description: Wide template with custom dimensions
+                  fields:
+                  - campaign_name
+                  - impressions
+                  - clicks
+                  scheduling:
+                  - hours: 8
+                    minutes: 0
+                    timezone: America/New_York
+                    interval: day
+                    lookback_window:
+                      name: default
+                  additional_params: {}
+                  connection_id: 789
+                  hashed_fields:
+                  - campaign_name
+      responses:
+        '201':
+          description: Template created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractTemplate'
+              examples:
+                created_template:
+                  value:
+                    id: 100
+                    title: My Custom Template
+                    description: Custom template for daily extraction
+                    data_class: daily
+                    datasource_name: act_on
+                    schedules_limit: 1
+                    scheduling:
+                    - hours: 6
+                      minutes: 0
+                      timezone: UTC
+                      interval: day
+                      lookback_window:
+                        name: default
+                    fields:
+                    - title: Impressions
+                      name: impressions
+                      user_kind: metric
+                      user_type: integer
+                      selected: true
+                      can_edit: true
+                      sql_name: impressions
+                      format: integer
+                      is_dynamic: false
+                    additional_params: []
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_fields:
+                  summary: Missing required fields
+                  value:
+                    parent_id:
+                    - This field is required.
+                    title:
+                    - This field is required.
+                invalid_parent:
+                  summary: Invalid parent template
+                  value:
+                    detail: Parent template with id=999 does not exist
+                wrong_datasource:
+                  summary: Parent belongs to different datasource
+                  value:
+                    detail: Parent template does not belong to the specified datasource
+                wide_no_connection:
+                  summary: Wide template without connection_id
+                  value:
+                    connection_id: Required for wide report templates
+                incompatible_fields:
+                  summary: Incompatible fields for wide template
+                  value:
+                    detail: Fields are incompatible
+                    incompatible_fields:
+                      field_a:
+                      - field_b
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/datasources/{datasource_name}/extract-templates/{id}:
+    get:
+      operationId: api_v3_datasource_extract_template_retrieve
+      summary: Get an extraction template
+      description: Returns detailed info about extraction template
+      parameters:
+      - in: path
+        name: datasource_name
+        schema:
+          type: string
+        required: true
+        description: Datasource name
+        examples:
+          datasource_extract_template_retrieve:
+            value:
+              datasource_name: google_sheets
+          wrong_datasource_name:
+            value:
+              datasource_name: wrong_name
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Extract Template ID
+        examples:
+          datasource_extract_template_retrieve:
+            value:
+              id: 1
+          wrong_datasource_name:
+            value:
+              id: 1
+      tags:
+      - Extraction templates
+      responses:
+        '200':
+          description: Get an extraction template
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractTemplate'
+              examples:
+                datasource_extract_template_retrieve:
+                  value:
+                    id: 1
+                    title: Extract Template 1
+                    description: Extract Template 1 description
+                    data_class: table
+                    datasource_name: google_sheets
+                    schedules_limit: 1
+                    scheduling:
+                    - days: 1
+                      hours: 1
+                      minutes: 1
+                      interval: daily
+                      timezone: UTC
+                      lookback_window:
+                        name: 1 day
+                    fields:
+                    - title: Field 1
+                      name: field_1
+                      user_kind: dimension
+                      user_type: string
+                      selected: true
+                      can_edit: true
+                      format: string
+                      is_dynamic: false
+                      sql_name: field_1_sql
+                    additional_params:
+                    - type: string
+                      name: param_1
+                      required: true
+                      title: Param 1
+                      description: Param 1 description
+                      params: {}
+                      initial_value: value
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_datasource_name:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Extract Template not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/extract-template/{template_id}/:
+    get:
+      operationId: api_embedded_v3_extract_template_retrieve
+      summary: Get an extraction template by id
+      description: Returns a compact representation of an extraction template, including whether it is a wide report template. Useful for deciding which extract flow to use before creating or migrating an extract.
+      tags:
+      - Extraction templates
+      parameters:
+      - in: path
+        name: template_id
+        schema:
+          type: integer
+        required: true
+        description: A unique integer value identifying this Extraction template.
+        examples:
+          success:
+            value: 1
+      responses:
+        '200':
+          description: Extraction template
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractTemplateRetrieveResponse'
+              examples:
+                success:
+                  value:
+                    id: 1
+                    datasource_name: act_on
+                    is_wide_template: true
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Template not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/extract-template/{template_id}/preview/:
+    post:
+      operationId: api_embedded_v3_extract_template_preview_create
+      summary: Preview extraction template data
+      description: Returns a preview of data that would be extracted using the given template configuration. The response includes both the data rows and column metadata.
+      tags:
+      - Extraction templates
+      parameters:
+      - in: path
+        name: template_id
+        schema:
+          type: integer
+        required: true
+        description: A unique integer value identifying this Extraction template.
+        examples:
+          success:
+            value: 1
+      requestBody:
+        description: Extraction template preview configuration
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractTemplatePreviewRequest'
+            examples:
+              success:
+                value:
+                  connection_id: 52955
+                  custom_settings:
+                    time_granularity: week
+                    week_start_day: monday
+                    sync_historical_data: 2025-09-27
+                    lookback_window: default
+                    custom_refresh_window: 1
+                    pivot: COMPANY
+                  fields:
+                  - date
+                  - input:pivot
+                  - pivotValues
+                  - approximateMemberReach
+                  dynamic_fields: []
+                  accounts:
+                  - '507446188'
+                  custom_filters: null
+      responses:
+        '200':
+          description: Preview data with rows and column metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractTemplatePreviewResponse'
+              examples:
+                success:
+                  value:
+                    data:
+                      dataSource:
+                      - key: '1'
+                        date: 2025-11-20
+                        __account_id: '12341234'
+                        __insert_date: 2026-03-18 05:34:00
+                        advertiser: dafasdf
+                        advertiser_id: '95123412390291'
+                        campaign: asdfasdf
+                        campaign_end_date: 2024-10-10
+                        campaign_id: '23123412481'
+                        campaign_start_date: 2019-10-10
+                        placement: asdfasdf
+                        placement_id: '267085055'
+                        site: asdfasdf
+                        site_id: 53866asdfasdf27
+                        unique_reach_total_reach: 0
+                        account_name: asdfasd.asdfasd
+                        date_yyyymmdd: '20251120'
+                      columns:
+                      - title: Date
+                        dataIndex: date
+                        key: date
+                      - title: '  account id'
+                        dataIndex: __account_id
+                        key: __account_id
+                      - title: '  insert date'
+                        dataIndex: __insert_date
+                        key: __insert_date
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                bad_request:
+                  value:
+                    detail: Invalid request parameters
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Template not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/extract-template/{template_id}/validation/:
+    post:
+      operationId: api_embedded_v3_extract_template_validation_create
+      summary: Validate extraction template settings
+      description: 'Validates the proposed combination of fields, custom settings and accounts against the given extraction template before creating or migrating an extract. Use this endpoint as a pre-flight check — for example, before creating an extract or calling the migrate-wide endpoint.
+
+
+        Accounts are referenced by their embedded account IDs and must all belong to a single connection. The connection is resolved automatically from the provided accounts.'
+      tags:
+      - Extraction templates
+      parameters:
+      - in: path
+        name: template_id
+        schema:
+          type: integer
+        required: true
+        description: A unique integer value identifying this Extraction template.
+        examples:
+          valid:
+            value: 1
+      requestBody:
+        description: Extraction template settings to validate
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractTemplateValidationRequest'
+            examples:
+              valid:
+                value:
+                  accounts:
+                  - 100500
+                  - 100501
+                  template_settings:
+                    fields:
+                    - date
+                    - campaign.name
+                    - metrics.clicks
+                    - metrics.impressions
+                    additional_params:
+                      time_granularity: day
+                    dynamic_fields: []
+                    custom_filters: null
+                    sync_historical_data: 2024-01-15
+      responses:
+        '200':
+          description: 'Validation result. An empty `detail` and empty `incompatible` mean the settings are valid. Incompatible field combinations are returned in `incompatible`; other validation errors (e.g. bad custom settings) are returned in `detail`.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractTemplateValidationResponse'
+              examples:
+                valid:
+                  value:
+                    detail: ''
+                    incompatible: {}
+                incompatible_fields:
+                  value:
+                    detail: ''
+                    incompatible:
+                      metrics.clicks:
+                      - reason1
+                      - reason2
+                custom_settings_error:
+                  value:
+                    detail: 'Got errors during validation: time_granularity got wrong value "foo"'
+                    incompatible: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                accounts_from_different_connections:
+                  value:
+                    detail: All accounts must belong to a single connection
+                missing_accounts:
+                  value:
+                    detail: Accounts 99999999 do not exist
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Template not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/datasources/{datasource_name}/custom_setting_options/:
+    post:
+      operationId: api_embedded_v3_custom_setting_options_create
+      summary: Load custom setting options
+      description: 'Returns selectable options for a custom extraction setting that is backed by source entities. Use this endpoint when an extraction template exposes a `select` custom setting with dynamic `source` metadata and the UI needs to populate its choices for one or more accounts.
+
+        Account IDs in the request are remote account IDs from the source platform (the same string IDs used by extraction template preview), scoped by the provided `connection_id`. Search and pagination are applied over the loaded option list by Improvado, so source APIs do not need to support filtering or paging.'
+      tags:
+      - Extraction templates
+      parameters:
+      - in: path
+        name: datasource_name
+        schema:
+          type: string
+        required: true
+        description: Data source name.
+        examples:
+          hubspot:
+            value: hubspot
+      requestBody:
+        description: Custom setting options request.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomSettingOptionsRequest'
+            examples:
+              hubspot_forms:
+                value:
+                  template_id: 10430
+                  connection_id: 20595
+                  account_ids:
+                  - '47924620'
+                  custom_setting_name: form_guids
+                  search_query: contact
+                  page: 1
+                  page_size: 50
+      responses:
+        '200':
+          description: Custom setting options grouped by account.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomSettingOptionsResponse'
+              examples:
+                hubspot_forms:
+                  value:
+                    custom_setting_name: form_guids
+                    results:
+                    - account_id: '47924620'
+                      count: 1
+                      next: null
+                      previous: null
+                      results:
+                      - value: 801130ad-d745-450a-a974-741b704cbd58
+                        label: New contact us form
+                        description: HUBSPOT
+                      search_applied: true
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                bad_request:
+                  value:
+                    detail: Custom setting options are available only for LES templates
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '408':
+          description: Request timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                timeout:
+                  value:
+                    detail: Custom setting options loading timed out. Please narrow the request or try again later.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+components:
+  schemas:
+    ExtractTemplateValidationRequest:
+      type: object
+      description: Request payload for extraction template settings validation.
+      required:
+      - accounts
+      properties:
+        accounts:
+          type: array
+          minItems: 1
+          items:
+            type: integer
+          description: 'Embedded account IDs to validate against the template. Must be non-empty and all accounts must belong to a single connection.
+
+            '
+          examples:
+          - - 100500
+            - 100501
+        template_settings:
+          type: object
+          description: Proposed template settings to validate. Optional.
+          properties:
+            fields:
+              type: array
+              items:
+                type: string
+              description: List of fields to validate.
+              examples:
+              - - date
+                - campaign.name
+                - metrics.clicks
+                - metrics.impressions
+            additional_params:
+              type: object
+              additionalProperties: true
+              description: Additional extraction parameters / custom settings.
+              examples:
+              - time_granularity: day
+            dynamic_fields:
+              type:
+              - array
+              - 'null'
+              items:
+                type: string
+              description: List of dynamic fields. Null if not used.
+            custom_filters:
+              type:
+              - object
+              - 'null'
+              additionalProperties: true
+              description: Custom filters to apply. Null if no filters.
+            sync_historical_data:
+              type:
+              - string
+              - 'null'
+              format: date
+              description: Start date for historical data backfill (ISO date format, e.g. "2024-01-15"). Null if not set.
+    CustomSettingOptionsRequest:
+      type: object
+      description: Request payload for loading dynamic custom setting options.
+      required:
+      - template_id
+      - connection_id
+      - account_ids
+      - custom_setting_name
+      properties:
+        template_id:
+          type: integer
+          description: Extraction template ID whose custom setting is being resolved.
+          examples:
+          - 10430
+        connection_id:
+          type: integer
+          description: Connection ID used to resolve credentials and scope accounts.
+          examples:
+          - 20595
+        account_ids:
+          type: array
+          minItems: 1
+          description: 'Remote account IDs from the source platform, scoped by `connection_id`. These are the same string account IDs used by extraction template preview.
+
+            '
+          items:
+            type: string
+          examples:
+          - - '47924620'
+        custom_setting_name:
+          type: string
+          description: Custom setting name from the extraction template.
+          examples:
+          - form_guids
+        search_query:
+          type: string
+          description: Optional case-insensitive search query applied to loaded options.
+          default: ''
+          examples:
+          - contact
+        page:
+          type: integer
+          minimum: 1
+          description: Page number for paginated options.
+          default: 1
+          examples:
+          - 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          description: Number of options to return per account.
+          default: 50
+          examples:
+          - 50
+    AdditionalParams:
+      type: object
+      description: Additional Params object
+      properties:
+        type:
+          type: string
+          description: Additional Params type
+        name:
+          type: string
+          description: Additional Params name
+        required:
+          type: boolean
+          description: Is the Additional Params required
+        title:
+          type: string
+          description: Additional Params title
+        description:
+          type: string
+          description: Additional Params description
+        params:
+          type: object
+          description: Additional Params params
+        initial_value:
+          type: string
+          description: Additional Params initial value
+      examples:
+      - additional_params:
+          value:
+            type: string
+            name: param_1
+            required: true
+            title: Param 1
+            description: Param 1 description
+            params: {}
+            initial_value: value
+    ExtractTemplatePreviewResponse:
+      type: object
+      description: Response containing preview data for an extraction template.
+      properties:
+        data:
+          type: object
+          properties:
+            dataSource:
+              type: array
+              description: Array of data rows returned by the preview.
+              items:
+                type: object
+                additionalProperties: true
+                properties:
+                  key:
+                    type: string
+                description: 'A single data row. Contains dynamic fields depending on the template configuration. The "key" property is always present.
+
+                  '
+            columns:
+              type: array
+              description: Column metadata describing the data fields.
+              items:
+                type: object
+                properties:
+                  title:
+                    type: string
+                    description: Human-readable column title.
+                  dataIndex:
+                    type: string
+                    description: Key used to look up the value in each dataSource row.
+                  key:
+                    type: string
+                    description: Unique column identifier.
+    CustomSettingOption:
+      type: object
+      description: A single selectable custom setting option.
+      properties:
+        value:
+          type: string
+          description: Value that should be submitted as the custom setting value.
+          examples:
+          - 801130ad-d745-450a-a974-741b704cbd58
+        label:
+          type: string
+          description: Human-readable option label.
+          examples:
+          - New contact us form
+        description:
+          type:
+          - string
+          - 'null'
+          description: Optional extra text that can be shown in the UI.
+          examples:
+          - HUBSPOT
+    ErrorResponse:
+      type: object
+      description: Error response object
+      properties:
+        detail:
+          type: string
+          description: Error message
+      examples:
+      - no_auth:
+          value:
+            detail: You do not have permission to perform this action.
+      - invalid_request:
+          value:
+            detail: Invalid request
+      - not_uniq_name:
+          value:
+            detail: Workspace with this title already exists
+    ExtractTemplate:
+      type: object
+      description: Extract Template object
+      properties:
+        id:
+          type: integer
+          description: Extract Template ID
+        title:
+          type: string
+          description: Extract Template title
+        description:
+          type: string
+          description: Extract Template description
+        data_class:
+          type: string
+          description: Data class
+        datasource_name:
+          type: string
+          description: Data source name
+        is_wide_template:
+          type: boolean
+          description: Whether the template is a wide report template
+        schedules_limit:
+          type: integer
+          description: Schedules limit
+        scheduling:
+          type: array
+          items:
+            $ref: '#/components/schemas/Scheduling'
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/Field'
+        additional_params:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdditionalParams'
+      examples:
+      - extract_template:
+          value:
+            id: 1
+            title: Extract Template 1
+            description: Extract Template 1 description
+            data_class: table
+            datasource_name: google_sheets
+            is_wide_template: false
+            schedules_limit: 1
+            scheduling:
+            - days: 1
+              hours: 1
+              minutes: 1
+              interval: daily
+              timezone: UTC
+              lookback_window:
+                name: 1 day
+            fields:
+            - title: Field 1
+              name: field_1
+              user_kind: dimension
+              user_type: string
+              selected: true
+              can_edit: true
+              sql_name: field_1
+              format: string
+              is_dynamic: false
+            additional_params:
+            - type: string
+              name: param_1
+              required: true
+              title: Param 1
+              description: Param 1 description
+              params: {}
+              initial_value: value
+    CustomSettingOptionsResponse:
+      type: object
+      description: Response containing dynamic custom setting options per account.
+      properties:
+        custom_setting_name:
+          type: string
+          description: Custom setting name from the request.
+          examples:
+          - form_guids
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomSettingOptionsAccountResult'
+    ExtractTemplatePreviewRequest:
+      type: object
+      description: Request payload for extraction template data preview.
+      properties:
+        connection_id:
+          type: integer
+          description: Connection ID to use for the preview.
+          examples:
+          - 52955
+        custom_settings:
+          type: object
+          additionalProperties: true
+          description: Custom settings for the extraction.
+          examples:
+          - time_granularity: week
+            week_start_day: monday
+            sync_historical_data: 2025-09-27
+            lookback_window: default
+            custom_refresh_window: 1
+            pivot: COMPANY
+        fields:
+          type: array
+          items:
+            type: string
+          description: List of fields to include in the preview.
+          examples:
+          - - date
+            - input:pivot
+            - pivotValues
+            - approximateMemberReach
+        dynamic_fields:
+          type: array
+          items:
+            type: string
+          description: List of dynamic fields to include.
+          examples:
+          - []
+        accounts:
+          type: array
+          items:
+            type: string
+          description: List of account IDs.
+          examples:
+          - - '507446188'
+        custom_filters:
+          nullable: true
+          description: Custom filters to apply. Null if no filters.
+          examples:
+          - null
+    ExtractTemplateCreateRequest:
+      type: object
+      description: Request body for creating a custom extraction template
+      required:
+      - parent_id
+      - title
+      - description
+      - fields
+      - scheduling
+      - additional_params
+      properties:
+        parent_id:
+          type: integer
+          description: ID of the parent (global) extraction template to base this template on
+        title:
+          type: string
+          minLength: 1
+          description: Title for the new template (must be unique within the agency)
+        description:
+          type: string
+          description: Description of the template (can be empty)
+        fields:
+          type: array
+          items:
+            type: string
+          description: List of field names to include in the template
+        scheduling:
+          type: array
+          items:
+            $ref: '#/components/schemas/Scheduling'
+          description: Extraction schedule configuration
+        additional_params:
+          type: object
+          description: Additional parameters for the template (e.g. time_granularity)
+        hashed_fields:
+          type: array
+          items:
+            type: string
+          description: List of field names to hash (optional)
+          default: []
+        historical_data_depth_limit:
+          type:
+          - integer
+          - 'null'
+          description: Limit on historical data depth in days (optional, null for no limit)
+          default: null
+        connection_id:
+          type:
+          - integer
+          - 'null'
+          description: Connection ID, required for wide report templates (parent has allow_to_select_dimensions or is_created_from_wide)
+          default: null
+    ExtractTemplateValidationResponse:
+      type: object
+      description: Result of extraction template settings validation.
+      properties:
+        detail:
+          type: string
+          description: Validation error details. Empty string if no errors.
+          examples:
+          - ''
+        incompatible:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: 'Map of incompatible fields to the list of incompatibility reasons. Empty object if all fields are compatible.
+
+            '
+          examples:
+          - {}
+    CustomSettingOptionsAccountResult:
+      type: object
+      description: 'Custom setting options resolved for one account. Pagination follows the standard paginated-response shape (`count`, `next`, `previous`, `results`). Search is applied locally over the cached entity-report options before pagination.
+
+        '
+      properties:
+        account_id:
+          type: string
+          description: Remote account ID from the request.
+          examples:
+          - '47924620'
+        count:
+          type: integer
+          description: Total number of options after the search filter is applied.
+          examples:
+          - 1
+        next:
+          type:
+          - string
+          - 'null'
+          description: Next page number as a string, or null if this is the last page.
+          examples:
+          - null
+        previous:
+          type:
+          - string
+          - 'null'
+          description: Previous page number as a string, or null if this is the first page.
+          examples:
+          - null
+        results:
+          type: array
+          description: Page of selectable options for this account.
+          items:
+            $ref: '#/components/schemas/CustomSettingOption'
+        search_applied:
+          type: boolean
+          description: Whether a non-empty search query was applied.
+          examples:
+          - true
+    Field:
+      type: object
+      description: Field object
+      properties:
+        title:
+          type: string
+          description: Field title
+        name:
+          type: string
+          description: Field name
+        user_kind:
+          type: string
+          description: Field kind
+        user_type:
+          type: string
+          description: Field type
+        selected:
+          type: boolean
+          description: Is the field selected
+        can_edit:
+          type: boolean
+          description: Can the field be edited
+        sql_name:
+          type: string
+          description: Sql Name of a Field
+        format:
+          type: string
+          description: 'Hint on how the value is meant to be rendered — not a storage contract. Metrics fall back to `float` whenever a data source does not declare a format explicitly, so `float` does not imply the value is fractional, and no decimal precision is guaranteed: values are passed through exactly as the data source returns them, without rounding. New formats may be added over time, so treat an unrecognised value as an unformatted string rather than failing.
+
+            '
+          enum:
+          - string
+          - float
+          - integer
+          - iso_8601_date
+          - currency
+          - percent
+          - duration
+          - url
+          - image_url
+          examples:
+          - float
+        is_dynamic:
+          type: boolean
+          description: Is the field dynamic
+      examples:
+      - field:
+          value:
+            title: Field 1
+            name: field_1
+            user_kind: property
+            user_type: string
+            selected: true
+            can_edit: true
+            format: string
+            is_dynamic: false
+    ExtractTemplateRetrieveResponse:
+      type: object
+      description: Compact representation of an extraction template.
+      properties:
+        id:
+          type: integer
+          description: Extraction template ID.
+          examples:
+          - 1
+        datasource_name:
+          type: string
+          description: Data source name.
+          examples:
+          - act_on
+        is_wide_template:
+          type: boolean
+          description: Whether the template is a wide report template.
+          examples:
+          - true
+    PaginatedExtractTemplateList:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Number of extract templates
+        next:
+          type: string
+          description: URL to the next page
+        previous:
+          type: string
+          description: URL to the previous page
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                description: Extract Template ID
+              title:
+                type: string
+                description: Extract Template title
+              description:
+                type: string
+                description: Extract Template description
+              data_class:
+                type: string
+                description: Data class
+              labels:
+                type: array
+                description: Extract Template labels
+                items:
+                  type: object
+                  properties:
+                    color:
+                      type: string
+                      description: Extract Template label color
+                    name:
+                      type: string
+                      description: Extract Template label name
+              datasource_name:
+                type: string
+                description: Data source name
+      examples:
+      - extract_templates_list:
+          value:
+            count: 2
+            next: null
+            previous: null
+            results:
+            - id: 1
+              title: Extract Template 1
+              description: Extract Template 1 description
+              data_class: table
+              datasource_name: google_sheets
+            - id: 2
+              title: Extract Template 2
+              description: Extract Template 2 description
+              data_class: table
+              datasource_name: google_ads
+    Scheduling:
+      type: object
+      description: Scheduling object
+      properties:
+        days:
+          type: integer
+          minimum: 0
+          description: 'Day offset within the interval, starting from 0. The valid range depends on `interval`:
+
+            - `hour`, `day` — must be 0
+
+            - `week` — 0–6 (day of week)
+
+            - `month` — 0–30 (day of month)
+
+            '
+        hours:
+          type: integer
+          minimum: 0
+          maximum: 23
+          description: Hour at which the run will start (0–23)
+        minutes:
+          type: integer
+          minimum: 0
+          maximum: 59
+          description: Minute of hour at which the run will start (0–59)
+        interval:
+          type: string
+          enum:
+          - hour
+          - day
+          - week
+          - month
+          description: 'Frequency at which the run will be performed:
+
+            - `hour` — every hour
+
+            - `day` — once per day
+
+            - `week` — once per week
+
+            - `month` — once per month
+
+            '
+        timezone:
+          type: string
+          default: UTC
+          description: IANA timezone name (e.g. `UTC`, `America/New_York`) the schedule is interpreted in.
+        recurrence:
+          type: integer
+          default: 1
+          description: How often the schedule repeats within the interval. Defaults to 1.
+        lookback_window:
+          type: object
+          description: 'Defines the period data will be extracted for. Applies to extract schedules only — ignored for load schedules.
+
+            '
+          properties:
+            name:
+              type: string
+              enum:
+              - default
+              - live
+              - max
+              description: 'Lookback window preset:
+
+                - `default` — past 30 days from the day of extract
+
+                - `live` — past 1 day from the day of extract
+
+                - `max` — past 60 days from the day of extract
+
+                '
+      examples:
+      - scheduling:
+          value:
+            days: 1
+            hours: 1
+            minutes: 1
+            interval: day
+            timezone: UTC
+            lookback_window:
+              name: default
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    tokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Bearer
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: dts_session_id
+      description: Cookie authentication. When using this method, the HTTP_X_IM_WORKSPACE_ID header must be included with the workspace_id (integer) value.

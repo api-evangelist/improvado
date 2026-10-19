@@ -1,0 +1,1765 @@
+openapi: 3.2.0
+info:
+  title: Improvado Embedded API v3 Extracts API
+  version: 3.0.0
+  description: 'Improvado Embedded API V3 provides programmatic access to data extraction, transformation, and loading capabilities.
+
+
+    ## Authentication
+
+
+    This API supports multiple authentication methods depending on the endpoint:
+
+
+    ### Basic Authentication
+
+    Used for workspace-agnostic operations such as:
+
+    - Creating access tokens (`POST /api/v3/token`)
+
+    - Listing workspaces (`GET /api/v3/workspaces`)
+
+    - Managing workspaces (`POST /api/v3/workspaces`, `GET /api/v3/workspaces/{id}`, `PUT /api/v3/workspaces/{id}`)
+
+    - Getting iframe URLs (`POST /api/v3/get_iframe_url`)
+
+    - Listing available recipes (`GET /api/v3/recipes/`)
+
+    etc.
+
+
+    **Format**: `Authorization: Basic `
+
+
+    ### Bearer Token Authentication
+
+    Used for workspace-scoped operations after obtaining a token from `/api/v3/token`. The token is scoped to a specific workspace.
+
+
+    **Format**: `Authorization: Bearer `
+
+
+    ### Cookie Authentication
+
+    Alternative to Bearer token for browser-based integrations. When using cookie authentication, you must include the workspace ID in the request header.
+
+
+    **Cookie**: `dts_session_id=`
+
+
+    **Required Header**: `X-IM-WORKSPACE-ID: `
+
+
+    ## Workspace Scoping
+
+
+    Most API operations are workspace-scoped. After authenticating with Basic Auth, obtain a workspace-specific token using `POST /api/v3/token` with the desired `workspace_id`. This token provides access only to resources within that workspace, ensuring isolation between different customers or projects.
+
+
+    ## Errors
+
+
+    The automated recipe operations under `/api/v3.1/automated-recipe*` and
+
+    `GET /api/v3.1/connections/{connection_id}/accounts/` return errors as
+
+    `{"code": "...", "message": "...", "details": {...}}`. Branch on `code`, never on the
+
+    message text. See Errors for the catalogue of codes and the shape of `details`.
+
+
+    All other operations return errors as `{"detail": "error description"}`.'
+servers:
+- url: https://embedded.improvado.io
+tags:
+- name: Extracts
+  x-zudoku-collapsed: true
+  description: 'Create and manage data extraction orders that pull data from connected sources.
+
+
+    An extract represents a configured instance of data extraction with specific settings:
+
+    - Which connection and account to extract from
+
+    - Which extract template to use
+
+    - Custom field selections and filters
+
+    - Schedule and date range configuration
+
+    - Where to store the extracted data (data table)
+
+
+    Extract workflow:
+
+    1. Create extract with desired configuration
+
+    2. Extraction runs automatically on schedule or on-demand
+
+    3. Data is stored in the associated data table
+
+    4. Monitor extraction status and history'
+paths:
+  /api/v3/extracts:
+    get:
+      parameters:
+      - in: query
+        name: extraction_ids
+        description: Extraction IDs
+        required: false
+        schema:
+          type: string
+          examples:
+          - 123,456
+        examples:
+          default:
+            value: 123,456
+      - in: query
+        name: connection_id
+        description: Filter extracts by connection ID. Accepts a single ID or a comma-separated list (e.g. `123` or `123,456`).
+        required: false
+        schema:
+          type: string
+          examples:
+          - 123,456
+        examples:
+          default:
+            value: 123,456
+      - in: query
+        name: datasource_name
+        description: Filter extracts by datasource name (e.g. `reddit`, `facebook`). Accepts a single value or a comma-separated list.
+        required: false
+        schema:
+          type: string
+          examples:
+          - reddit,facebook
+        examples:
+          default:
+            value: reddit,facebook
+      - in: query
+        name: data_table_id
+        description: Filter extracts by data table ID. Accepts a single ID or a comma-separated list.
+        required: false
+        schema:
+          type: string
+          examples:
+          - 789,790
+        examples:
+          default:
+            value: 789,790
+      operationId: api_v3_extracts_list
+      summary: List extracts
+      tags:
+      - Extracts
+      responses:
+        '200':
+          description: Get a list of Extracts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaginatedExtractList'
+              examples:
+                extracts_list:
+                  value:
+                    count: 2
+                    next: null
+                    previous: null
+                    results:
+                    - id: 1
+                      title: Extract 1
+                      connection_id: 1
+                      account_id: 1
+                      account_name: Account 1
+                      fields:
+                      - title: Field 1
+                        name: field_1
+                        user_kind: string
+                        user_type: string
+                        selected: true
+                        can_edit: true
+                        sql_name: field_1
+                        format: string
+                        is_dynamic: false
+                      schedules_limit: 1
+                      scheduling:
+                      - days: 1
+                        hours: 1
+                        minutes: 1
+                        interval: daily
+                        timezone: UTC
+                        lookback_window:
+                          name: 1 day
+                      additional_params:
+                      - type: string
+                        name: param_1
+                        required: true
+                        title: Param 1
+                        description: Param 1 description
+                        params: {}
+                        initial_value: value
+                      template:
+                        id: 1
+                        title: Extract Template 1
+                        datasource_name: google_sheets
+                        data_class: table
+                        is_wide_template: false
+                      data_table:
+                        id: 1
+                        name: table_1
+                        title: Table 1
+                      created_at: 2021-01-01 00:00:00+00:00
+                      last_sync: 2021-01-01 00:00:00+00:00
+                      status: active
+                      error_text: Error text
+                      sync_historical_data: 2025-02-25
+                    - id: 2
+                      title: Extract 2
+                      connection_id: 2
+                      account_id: 2
+                      account_name: Account 2
+                      template:
+                        id: 2
+                        title: Extract Template 2
+                        datasource_name: google_ads
+                        data_class: table
+                        is_wide_template: false
+                      data_table:
+                        id: 2
+                        name: table_2
+                        title: Table 2
+                      created_at: 2021-01-01 00:00:00+00:00
+                      last_sync: 2021-01-01 00:00:00+00:00
+                      status: active
+                      error_text: Error text
+                      sync_historical_data: null
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3.1/extracts/:
+    post:
+      parameters: []
+      operationId: api_v3_1_extract_create
+      summary: Create extract
+      description: Request to this endpoint setups a new extracts. New extract creation request is composed of Connection, Account and Extract Template data.
+      tags:
+      - Extracts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data_table_title:
+                  type: string
+                  description: Data Table Title
+                template_id:
+                  type: integer
+                  description: Template ID
+                template_settings:
+                  type: object
+                  description: Template settings
+                  properties:
+                    fields:
+                      type: array
+                      items:
+                        type: string
+                    additional_params:
+                      type: object
+                    sync_historical_data:
+                      type: string
+                      description: Parameter defining start date for historical data backfill (date in ISO format like "2024-01-01")
+                    scheduling:
+                      type: object
+                      properties:
+                        days:
+                          type: integer
+                        hours:
+                          type: integer
+                        minutes:
+                          type: integer
+                        interval:
+                          type: string
+                          enum:
+                          - day
+                          - week
+                          - month
+                          - hour
+                        timezone:
+                          type: string
+                        lookback_window:
+                          type: string
+                accounts:
+                  type: array
+                  items:
+                    type: integer
+            examples:
+              extraction_create:
+                value:
+                  data_table_title: Table 1
+                  template_id: 1
+                  template_settings:
+                    fields:
+                    - field_1
+                    - field_2
+                    additional_params:
+                      lookback_window: default
+                    sync_historical_data: 2021-01-01
+                    scheduling:
+                      days: 1
+                      hours: 1
+                      minutes: 1
+                      interval: day
+                      timezone: UTC
+                      lookback_window: default
+                  accounts:
+                  - 1
+                  - 2
+      responses:
+        '201':
+          description: Create an Extract
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created_orders:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        account:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            name:
+                              type: string
+                        extraction_order_template_name:
+                          type: string
+                        data_table_id:
+                          type: integer
+                  conflicted_orders:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        account:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            name:
+                              type: string
+                        extraction_order_template_name:
+                          type: string
+                        data_table_id:
+                          type: integer
+              examples:
+                extraction_create:
+                  value:
+                    created_orders:
+                    - id: 1
+                      account:
+                        id: 1
+                        name: Account 1
+                      extraction_order_template_name: Template 1
+                      data_table_id: 1
+                    conflicted_orders:
+                    - id: 2
+                      account:
+                        id: 2
+                        name: Account 2
+                      extraction_order_template_name: Template 2
+                      data_table_id: 2
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/extracts/{id}:
+    get:
+      operationId: api_v3_extract_retrieve
+      summary: Get an extract
+      description: Get detailed info about extract
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Extract ID
+        examples:
+          extract_retrieve:
+            value:
+              id: 1
+          not_found:
+            value:
+              id: 404
+          no_auth:
+            value:
+              id: 401
+      tags:
+      - Extracts
+      responses:
+        '200':
+          description: Get an Extract
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Extract'
+              examples:
+                extract_retrieve:
+                  value:
+                    id: 1
+                    title: Extract 1
+                    connection_id: 1
+                    account_id: 1
+                    account_name: Account 1
+                    template:
+                      id: 1
+                      title: Extract Template 1
+                      datasource_name: google_sheets
+                      data_class: table
+                      is_wide_template: false
+                    data_table:
+                      id: 1
+                      name: table_1
+                      title: Table 1
+                    fields:
+                    - title: Field 1
+                      name: field_1
+                      user_kind: string
+                      user_type: string
+                      selected: true
+                      can_edit: true
+                      sql_name: field_1
+                      format: string
+                      is_dynamic: false
+                    created_at: 2021-01-01 00:00:00+00:00
+                    last_sync: 2021-01-01 00:00:00+00:00
+                    status: active
+                    error_text: Error text
+                    schedules_limit: 1
+                    scheduling:
+                    - days: 1
+                      hours: 1
+                      minutes: 1
+                      interval: daily
+                      timezone: UTC
+                      lookback_window:
+                        name: 1 day
+                    additional_params:
+                    - type: string
+                      name: param_1
+                      required: true
+                      title: Param 1
+                      description: Param 1 description
+                      params: {}
+                      initial_value: value
+                    sync_historical_data: 2025-02-25
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Not Found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    put:
+      operationId: api_v3_extract_update
+      summary: Update an extract
+      description: Allows to update scheduling, fields, additional parameters and sync_historical_data attributes values for existing extraction.
+      tags:
+      - Extracts
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Extract ID
+        examples:
+          extract_update:
+            value: 1
+          missing_title:
+            value: 1
+          not_uniq_name:
+            value: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scheduling:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Scheduling'
+                fields:
+                  type: array
+                  items:
+                    type: string
+                additional_params:
+                  type: object
+                sync_historical_data:
+                  type: string
+            examples:
+              extract_update:
+                value:
+                  scheduling:
+                  - days: 1
+                    hours: 1
+                    minutes: 1
+                    interval: daily
+                    timezone: UTC
+                    lookback_window:
+                      name: 1 day
+                  fields:
+                  - field_name_1
+                  - field_name_2
+                  additional_params:
+                    param1: value1
+                    param2: value2
+                  sync_historical_data: 2021-01-01 00:00:00+00:00
+              missing_title:
+                value:
+                  wrong_field: Extract 1
+      responses:
+        '200':
+          description: Update an Extract
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Extract'
+              examples:
+                extract_update:
+                  value:
+                    id: 1
+                    title: Extract 1
+                    connection_id: 1
+                    account_id: 1
+                    account_name: Account 1
+                    template:
+                      id: 1
+                      title: Extract Template 1
+                      datasource_name: google_sheets
+                      data_class: table
+                      is_wide_template: false
+                    data_table:
+                      id: 1
+                      name: table_1
+                      title: Table 1
+                    fields:
+                    - title: Field 1
+                      name: field_1
+                      user_kind: string
+                      user_type: string
+                      selected: true
+                      can_edit: true
+                      sql_name: field_1
+                      format: string
+                      is_dynamic: false
+                    created_at: 2021-01-01 00:00:00+00:00
+                    last_sync: 2021-01-01 00:00:00+00:00
+                    status: active
+                    error_text: Error text
+                    schedules_limit: 1
+                    scheduling:
+                    - days: 1
+                      hours: 1
+                      minutes: 1
+                      interval: daily
+                      timezone: UTC
+                      lookback_window:
+                        name: 1 day
+                    additional_params:
+                    - type: string
+                      name: param_1
+                      required: true
+                      title: Param 1
+                      description: Param 1 description
+                      params: {}
+                      initial_value: value
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_title:
+                  value:
+                    detail: Invalid request
+                not_uniq_name:
+                  value:
+                    detail: Extract with this title already exists
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    patch:
+      operationId: api_v3_extract_partial_update
+      summary: Update an extract partially
+      description: Allows to partially update scheduling, fields, additional parameters and sync_historical_data attributes values for existing extraction. Only provided fields will be updated, omitted fields will remain unchanged.
+      tags:
+      - Extracts
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Extract ID
+        examples:
+          extract_partial_update:
+            value: 1
+          missing_title:
+            value: 1
+          not_uniq_name:
+            value: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scheduling:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Scheduling'
+                fields:
+                  type: array
+                  items:
+                    type: string
+                additional_params:
+                  type: object
+                sync_historical_data:
+                  type: string
+            examples:
+              extract_partial_update:
+                value:
+                  scheduling:
+                  - days: 1
+                    hours: 1
+                    minutes: 1
+                    interval: daily
+                    timezone: UTC
+                    lookback_window:
+                      name: 1 day
+                  fields:
+                  - field_name_1
+                  - field_name_2
+                  additional_params:
+                    param1: value1
+                    param2: value2
+                  sync_historical_data: 2021-01-01 00:00:00+00:00
+              partial_fields_only:
+                value:
+                  fields:
+                  - field_name_1
+                  - field_name_3
+              partial_scheduling_only:
+                value:
+                  scheduling:
+                  - days: 2
+                    hours: 12
+                    minutes: 30
+                    interval: weekly
+                    timezone: America/New_York
+                    lookback_window:
+                      name: 3 days
+              missing_title:
+                value:
+                  wrong_field: Extract 1
+      responses:
+        '200':
+          description: Partially Update an Extract
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Extract'
+              examples:
+                extract_partial_update:
+                  value:
+                    id: 1
+                    title: Extract 1
+                    connection_id: 1
+                    account_id: 1
+                    account_name: Account 1
+                    template:
+                      id: 1
+                      title: Extract Template 1
+                      datasource_name: google_sheets
+                      data_class: table
+                      is_wide_template: false
+                    data_table:
+                      id: 1
+                      name: table_1
+                      title: Table 1
+                    fields:
+                    - title: Field 1
+                      name: field_1
+                      user_kind: string
+                      user_type: string
+                      selected: true
+                      can_edit: true
+                      sql_name: field_1
+                      format: string
+                      is_dynamic: false
+                    created_at: 2021-01-01 00:00:00+00:00
+                    last_sync: 2021-01-01 00:00:00+00:00
+                    status: active
+                    error_text: Error text
+                    schedules_limit: 1
+                    scheduling:
+                    - days: 1
+                      hours: 1
+                      minutes: 1
+                      interval: daily
+                      timezone: UTC
+                      lookback_window:
+                        name: 1 day
+                    additional_params:
+                    - type: string
+                      name: param_1
+                      required: true
+                      title: Param 1
+                      description: Param 1 description
+                      params: {}
+                      initial_value: value
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_title:
+                  value:
+                    detail: Invalid request
+                not_uniq_name:
+                  value:
+                    detail: Extract with this title already exists
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/extracts/{id}/run:
+    post:
+      operationId: api_v3_extract_run
+      summary: Run an extract
+      description: Manual run an extract with custom date range
+      tags:
+      - Extracts
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Extract ID
+        examples:
+          extract_partial_update:
+            value: 1
+          missing_title:
+            value: 1
+          not_uniq_name:
+            value: 1
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date_from:
+                  type: string
+                  format: date
+                  description: Start date for the extract run
+                date_to:
+                  type: string
+                  format: date
+                  description: End date for the extract run
+            examples:
+              extract_run:
+                value:
+                  date_from: 2025-07-18
+                  date_to: 2025-08-18
+              missing_date:
+                value:
+                  date_to: 2025-08-18
+      responses:
+        '200':
+          description: Run an Extract
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Extract'
+              examples:
+                extract_run_success:
+                  value:
+                    id: 1
+                    title: Extract 1
+                    date_from: 2025-07-18
+                    date_to: 2025-08-18
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_date:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/extracts/{extract_id}/pause:
+    post:
+      operationId: api_v3_extract_pause
+      summary: Pause an extract
+      description: Pauses extract so it wont download data from datasource until it’s unpaused
+      tags:
+      - Extracts
+      parameters:
+      - in: path
+        name: extract_id
+        schema:
+          type: integer
+        required: true
+        description: Extract ID
+        examples:
+          extract_pause:
+            value:
+              extract_id: 1
+      responses:
+        '204':
+          description: Pause an Extract
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_extract_id:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Extract not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/extracts/{extract_id}/unpause:
+    post:
+      operationId: api_v3_extract_unpause
+      summary: Unpause an extract
+      description: Unpauses extract so it starts to download data from datasource
+      tags:
+      - Extracts
+      parameters:
+      - in: path
+        name: extract_id
+        schema:
+          type: integer
+        required: true
+        description: Extract ID
+        examples:
+          extract_unpause:
+            value:
+              extract_id: 1
+      responses:
+        '204':
+          description: Unpause an Extract
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_extract_id:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Extract not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/extracts/migrate-wide:
+    post:
+      operationId: api_v3_extract_migrate_wide
+      summary: Migrate a wide report extract
+      description: Migrates a wide report extract with changed dimensions to a new extract with a new data table. The new extract is linked to the source extract and the source extract is paused; its data and data table remain queryable. Every omitted `template_settings` field is pre-filled from the source extract, so only the settings being changed need to be passed. `template_id` and `account` are resolved from the source extract when omitted; a data table title is generated when `data_table_title` is empty.
+      tags:
+      - Extracts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MigrateWideExtractRequest'
+            examples:
+              extract_migrate_wide:
+                value:
+                  template_id: 421
+                  account: 2330268667
+                  migrated_from_extraction_id: 1443619
+                  data_table_title: ''
+                  template_settings:
+                    fields:
+                    - date
+                    - campaign.name
+                    - metrics.clicks
+              minimal:
+                value:
+                  migrated_from_extraction_id: 1443619
+                  template_settings:
+                    fields:
+                    - date
+                    - campaign.name
+                    - metrics.clicks
+      responses:
+        '200':
+          description: The newly created extract detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Extract'
+              examples:
+                extract_migrate_wide:
+                  value:
+                    id: 1443620
+                    title: Extract 1
+                    connection_id: 2047
+                    account_id: 2330268667
+                    account_name: Account 1
+                    template:
+                      id: 421
+                      title: Extract Template 1
+                      datasource_name: facebook
+                      data_class: daily
+                      is_wide_template: true
+                    data_table:
+                      id: 2
+                      name: table_2
+                      title: facebook_insights_new
+                    fields:
+                    - title: Field 1
+                      name: field_1
+                      user_kind: dimension
+                      user_type: string
+                      selected: true
+                      can_edit: true
+                      sql_name: field_1
+                      format: string
+                      is_dynamic: false
+                    created_at: 2021-01-01 00:00:00+00:00
+                    last_sync: In progress...
+                    status: syncing
+                    error_text: ''
+                    schedules_limit: 10
+                    scheduling:
+                    - days: 1
+                      hours: 1
+                      minutes: 1
+                      interval: day
+                      timezone: UTC
+                      lookback_window:
+                        name: default
+                    additional_params:
+                    - type: string
+                      name: param_1
+                      required: true
+                      title: Param 1
+                      description: Param 1 description
+                      params: {}
+                      initial_value: value
+                    sync_historical_data: 2025-01-01
+        '400':
+          description: Bad Request - Invalid request parameters, the source extract is not a wide report or dimensions were not changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_wide:
+                  value:
+                    detail: Extract is not a wide report extract
+                dimensions_not_changed:
+                  value:
+                    detail: New fields do not differ from the source extract fields
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Extract not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+components:
+  schemas:
+    MigrateWideExtractRequest:
+      type: object
+      description: Request payload for migrating a wide report extract.
+      required:
+      - migrated_from_extraction_id
+      - template_settings
+      properties:
+        migrated_from_extraction_id:
+          type: integer
+          description: ID of the source wide report extract being migrated.
+          examples:
+          - 1443619
+        template_id:
+          type: integer
+          description: Template ID. Resolved from the source extract when omitted.
+          examples:
+          - 421
+        account:
+          type: integer
+          description: Account ID. Resolved from the source extract when omitted.
+          examples:
+          - 2330268667
+        data_table_title:
+          type: string
+          description: Title of the new data table. Generated automatically when empty.
+          examples:
+          - ''
+        template_settings:
+          type: object
+          description: 'Template settings for the new extract. May be an empty object — every omitted field is pre-filled from the source extract.
+
+            '
+          properties:
+            fields:
+              type: array
+              items:
+                type: string
+              description: List of fields including the changed dimensions.
+              examples:
+              - - date
+                - campaign.name
+                - metrics.clicks
+            additional_params:
+              type: object
+              additionalProperties: true
+              description: Additional extraction parameters.
+            scheduling:
+              type: array
+              items:
+                $ref: '#/components/schemas/Scheduling'
+            sync_historical_data:
+              type:
+              - string
+              - 'null'
+              description: Start date for historical data backfill (date in ISO format like "2025-01-01").
+            dynamic_fields:
+              type: array
+              items:
+                type: string
+              description: List of dynamic fields.
+            hashed_fields:
+              type:
+              - array
+              - 'null'
+              items:
+                type: string
+              description: List of hashed fields.
+            custom_filters:
+              type:
+              - object
+              - 'null'
+              additionalProperties: true
+              description: Custom filters to apply. Null if no filters.
+    ErrorResponse:
+      type: object
+      description: Error response object
+      properties:
+        detail:
+          type: string
+          description: Error message
+      examples:
+      - no_auth:
+          value:
+            detail: You do not have permission to perform this action.
+      - invalid_request:
+          value:
+            detail: Invalid request
+      - not_uniq_name:
+          value:
+            detail: Workspace with this title already exists
+    DataTable:
+      type: object
+      description: Data Table object
+      properties:
+        id:
+          type: integer
+          description: Data Table ID
+        title:
+          type: string
+          description: Data Table title
+        datasource_name:
+          type: string
+          description: Data source name
+      examples:
+      - data_table:
+          value:
+            id: 1
+            title: Table 1
+            datasource_name: google_sheets
+    Extract:
+      type: object
+      description: Extract object
+      properties:
+        id:
+          type: integer
+          description: Extract ID
+        title:
+          type: string
+          description: Extract title
+        connection_id:
+          type: integer
+          description: Connection ID
+        account_id:
+          type: integer
+          description: Account ID
+        account_name:
+          type: string
+          description: Account name
+        account_entity_id:
+          type: integer
+          description: Internal Improvado account entity ID.
+        account_embedded_id:
+          type:
+          - integer
+          - 'null'
+          description: Embedded account ID. Null if the account is not linked to an embedded account.
+        template:
+          type: object
+          properties:
+            id:
+              type: integer
+              description: Extract Template ID
+            title:
+              type: string
+              description: Extract Template title
+            datasource_name:
+              type: string
+              description: Data source name
+            data_class:
+              type: string
+              description: Data class
+            is_wide_template:
+              type: boolean
+              description: Whether the template is a wide report template
+        data_table:
+          type: object
+          properties:
+            id:
+              type: integer
+              description: Data Table ID
+            name:
+              type: string
+              description: Data Table name
+            title:
+              type: string
+              description: Data Table title
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/Field'
+        created_at:
+          type: string
+          description: Extract creation date
+        last_sync:
+          type: string
+          description: Last sync date
+        status:
+          type: string
+          description: Extract status
+        error_text:
+          type: string
+          description: Error text
+        schedules_limit:
+          type: integer
+          description: Schedules limit
+        scheduling:
+          type: array
+          items:
+            $ref: '#/components/schemas/Scheduling'
+        additional_params:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdditionalParams'
+        sync_historical_data:
+          type:
+          - string
+          - 'null'
+          readOnly: true
+          description: Start date for historical data backfill (ISO date format, e.g. "2025-02-25"). Null if not set.
+      examples:
+      - extract:
+          value:
+            id: 1
+            title: Extract 1
+            connection_id: 1
+            account_id: 1
+            account_name: Account 1
+            account_entity_id: 1001
+            account_embedded_id: 5001
+            template:
+              id: 1
+              title: Extract Template 1
+              datasource_name: google_sheets
+              data_class: table
+              is_wide_template: false
+            data_table:
+              id: 1
+              name: table_1
+              title: Table 1
+            fields:
+            - title: Field 1
+              name: field_1
+              user_kind: string
+              user_type: string
+              selected: true
+              can_edit: true
+              sql_name: field_1
+              format: string
+              is_dynamic: false
+            created_at: 2021-01-01 00:00:00+00:00
+            last_sync: 2021-01-01 00:00:00+00:00
+            status: active
+            error_text: Error text
+            schedules_limit: 1
+            scheduling:
+            - days: 1
+              hours: 1
+              minutes: 1
+              interval: daily
+              timezone: UTC
+              lookback_window:
+                name: 1 day
+            additional_params:
+            - type: string
+              name: param_1
+              required: true
+              title: Param 1
+              description: Param 1 description
+              params: {}
+              initial_value: value
+            sync_historical_data: 2025-02-25
+    ExtractTemplate:
+      type: object
+      description: Extract Template object
+      properties:
+        id:
+          type: integer
+          description: Extract Template ID
+        title:
+          type: string
+          description: Extract Template title
+        description:
+          type: string
+          description: Extract Template description
+        data_class:
+          type: string
+          description: Data class
+        datasource_name:
+          type: string
+          description: Data source name
+        is_wide_template:
+          type: boolean
+          description: Whether the template is a wide report template
+        schedules_limit:
+          type: integer
+          description: Schedules limit
+        scheduling:
+          type: array
+          items:
+            $ref: '#/components/schemas/Scheduling'
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/Field'
+        additional_params:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdditionalParams'
+      examples:
+      - extract_template:
+          value:
+            id: 1
+            title: Extract Template 1
+            description: Extract Template 1 description
+            data_class: table
+            datasource_name: google_sheets
+            is_wide_template: false
+            schedules_limit: 1
+            scheduling:
+            - days: 1
+              hours: 1
+              minutes: 1
+              interval: daily
+              timezone: UTC
+              lookback_window:
+                name: 1 day
+            fields:
+            - title: Field 1
+              name: field_1
+              user_kind: dimension
+              user_type: string
+              selected: true
+              can_edit: true
+              sql_name: field_1
+              format: string
+              is_dynamic: false
+            additional_params:
+            - type: string
+              name: param_1
+              required: true
+              title: Param 1
+              description: Param 1 description
+              params: {}
+              initial_value: value
+    Field:
+      type: object
+      description: Field object
+      properties:
+        title:
+          type: string
+          description: Field title
+        name:
+          type: string
+          description: Field name
+        user_kind:
+          type: string
+          description: Field kind
+        user_type:
+          type: string
+          description: Field type
+        selected:
+          type: boolean
+          description: Is the field selected
+        can_edit:
+          type: boolean
+          description: Can the field be edited
+        sql_name:
+          type: string
+          description: Sql Name of a Field
+        format:
+          type: string
+          description: 'Hint on how the value is meant to be rendered — not a storage contract. Metrics fall back to `float` whenever a data source does not declare a format explicitly, so `float` does not imply the value is fractional, and no decimal precision is guaranteed: values are passed through exactly as the data source returns them, without rounding. New formats may be added over time, so treat an unrecognised value as an unformatted string rather than failing.
+
+            '
+          enum:
+          - string
+          - float
+          - integer
+          - iso_8601_date
+          - currency
+          - percent
+          - duration
+          - url
+          - image_url
+          examples:
+          - float
+        is_dynamic:
+          type: boolean
+          description: Is the field dynamic
+      examples:
+      - field:
+          value:
+            title: Field 1
+            name: field_1
+            user_kind: property
+            user_type: string
+            selected: true
+            can_edit: true
+            format: string
+            is_dynamic: false
+    AdditionalParams:
+      type: object
+      description: Additional Params object
+      properties:
+        type:
+          type: string
+          description: Additional Params type
+        name:
+          type: string
+          description: Additional Params name
+        required:
+          type: boolean
+          description: Is the Additional Params required
+        title:
+          type: string
+          description: Additional Params title
+        description:
+          type: string
+          description: Additional Params description
+        params:
+          type: object
+          description: Additional Params params
+        initial_value:
+          type: string
+          description: Additional Params initial value
+      examples:
+      - additional_params:
+          value:
+            type: string
+            name: param_1
+            required: true
+            title: Param 1
+            description: Param 1 description
+            params: {}
+            initial_value: value
+    PaginatedExtractList:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Number of extracts
+        next:
+          type: string
+          description: URL to the next page
+        previous:
+          type: string
+          description: URL to the previous page
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                description: Extract ID
+              created_at:
+                type: string
+                description: Extract creation date
+              template:
+                $ref: '#/components/schemas/ExtractTemplate'
+              schedules_limit:
+                type: integer
+                description: Schedules limit
+              scheduling:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Scheduling'
+              additional_params:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdditionalParams'
+              fields:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Field'
+              last_sync:
+                type: string
+                description: Last sync date
+              status:
+                type: string
+                description: Extract status
+              error_text:
+                type: string
+                description: Error text
+              connection_id:
+                type: integer
+                description: Connection ID
+              data_table:
+                $ref: '#/components/schemas/DataTable'
+              title:
+                type: string
+                description: Extract title
+              account_id:
+                type: integer
+                description: Account ID
+              account_name:
+                type: string
+                description: Account name
+              account_entity_id:
+                type: integer
+                description: Internal Improvado account entity ID.
+              account_embedded_id:
+                type:
+                - integer
+                - 'null'
+                description: Embedded account ID. Null if the account is not linked to an embedded account.
+              sync_historical_data:
+                type:
+                - string
+                - 'null'
+                readOnly: true
+                description: Start date for historical data backfill (ISO date format, e.g. "2025-02-25"). Null if not set.
+      examples:
+      - extracts_list:
+          value:
+            count: 2
+            next: null
+            previous: null
+            results:
+            - id: 1
+              title: Extract 1
+              connection_id: 1
+              account_id: 1
+              account_name: Account 1
+              account_entity_id: 1001
+              account_embedded_id: 5001
+              template:
+                id: 1
+                title: Extract Template 1
+                datasource_name: google_sheets
+                data_class: table
+                is_wide_template: false
+              data_table:
+                id: 1
+                name: table_1
+                title: Table 1
+              created_at: 2021-01-01 00:00:00+00:00
+              last_sync: 2021-01-01 00:00:00+00:00
+              status: active
+              error_text: Error text
+              sync_historical_data: 2025-02-25
+            - id: 2
+              title: Extract 2
+              connection_id: 2
+              account_id: 2
+              account_name: Account 2
+              account_entity_id: 1002
+              account_embedded_id: null
+              template:
+                id: 2
+                title: Extract Template 2
+                datasource_name: google_ads
+                data_class: table
+                is_wide_template: false
+              data_table:
+                id: 2
+                name: table_2
+                title: Table 2
+              created_at: 2021-01-01 00:00:00+00:00
+              last_sync: 2021-01-01 00:00:00+00:00
+              status: active
+              error_text: Error text
+              sync_historical_data: null
+    Scheduling:
+      type: object
+      description: Scheduling object
+      properties:
+        days:
+          type: integer
+          minimum: 0
+          description: 'Day offset within the interval, starting from 0. The valid range depends on `interval`:
+
+            - `hour`, `day` — must be 0
+
+            - `week` — 0–6 (day of week)
+
+            - `month` — 0–30 (day of month)
+
+            '
+        hours:
+          type: integer
+          minimum: 0
+          maximum: 23
+          description: Hour at which the run will start (0–23)
+        minutes:
+          type: integer
+          minimum: 0
+          maximum: 59
+          description: Minute of hour at which the run will start (0–59)
+        interval:
+          type: string
+          enum:
+          - hour
+          - day
+          - week
+          - month
+          description: 'Frequency at which the run will be performed:
+
+            - `hour` — every hour
+
+            - `day` — once per day
+
+            - `week` — once per week
+
+            - `month` — once per month
+
+            '
+        timezone:
+          type: string
+          default: UTC
+          description: IANA timezone name (e.g. `UTC`, `America/New_York`) the schedule is interpreted in.
+        recurrence:
+          type: integer
+          default: 1
+          description: How often the schedule repeats within the interval. Defaults to 1.
+        lookback_window:
+          type: object
+          description: 'Defines the period data will be extracted for. Applies to extract schedules only — ignored for load schedules.
+
+            '
+          properties:
+            name:
+              type: string
+              enum:
+              - default
+              - live
+              - max
+              description: 'Lookback window preset:
+
+                - `default` — past 30 days from the day of extract
+
+                - `live` — past 1 day from the day of extract
+
+                - `max` — past 60 days from the day of extract
+
+                '
+      examples:
+      - scheduling:
+          value:
+            days: 1
+            hours: 1
+            minutes: 1
+            interval: day
+            timezone: UTC
+            lookback_window:
+              name: default
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    tokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Bearer
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: dts_session_id
+      description: Cookie authentication. When using this method, the HTTP_X_IM_WORKSPACE_ID header must be included with the workspace_id (integer) value.

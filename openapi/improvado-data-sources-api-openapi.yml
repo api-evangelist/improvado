@@ -1,0 +1,248 @@
+openapi: 3.2.0
+info:
+  title: Improvado Embedded API v3 Data sources API
+  version: 3.0.0
+  description: 'Improvado Embedded API V3 provides programmatic access to data extraction, transformation, and loading capabilities.
+
+
+    ## Authentication
+
+
+    This API supports multiple authentication methods depending on the endpoint:
+
+
+    ### Basic Authentication
+
+    Used for workspace-agnostic operations such as:
+
+    - Creating access tokens (`POST /api/v3/token`)
+
+    - Listing workspaces (`GET /api/v3/workspaces`)
+
+    - Managing workspaces (`POST /api/v3/workspaces`, `GET /api/v3/workspaces/{id}`, `PUT /api/v3/workspaces/{id}`)
+
+    - Getting iframe URLs (`POST /api/v3/get_iframe_url`)
+
+    - Listing available recipes (`GET /api/v3/recipes/`)
+
+    etc.
+
+
+    **Format**: `Authorization: Basic `
+
+
+    ### Bearer Token Authentication
+
+    Used for workspace-scoped operations after obtaining a token from `/api/v3/token`. The token is scoped to a specific workspace.
+
+
+    **Format**: `Authorization: Bearer `
+
+
+    ### Cookie Authentication
+
+    Alternative to Bearer token for browser-based integrations. When using cookie authentication, you must include the workspace ID in the request header.
+
+
+    **Cookie**: `dts_session_id=`
+
+
+    **Required Header**: `X-IM-WORKSPACE-ID: `
+
+
+    ## Workspace Scoping
+
+
+    Most API operations are workspace-scoped. After authenticating with Basic Auth, obtain a workspace-specific token using `POST /api/v3/token` with the desired `workspace_id`. This token provides access only to resources within that workspace, ensuring isolation between different customers or projects.
+
+
+    ## Errors
+
+
+    The automated recipe operations under `/api/v3.1/automated-recipe*` and
+
+    `GET /api/v3.1/connections/{connection_id}/accounts/` return errors as
+
+    `{"code": "...", "message": "...", "details": {...}}`. Branch on `code`, never on the
+
+    message text. See Errors for the catalogue of codes and the shape of `details`.
+
+
+    All other operations return errors as `{"detail": "error description"}`.'
+servers:
+- url: https://embedded.improvado.io
+tags:
+- name: Data Sources
+  x-zudoku-collapsed: true
+  description: 'Browse and configure available data sources for extraction.
+
+
+    Data sources represent the marketing platforms, advertising networks, analytics tools, and other systems
+
+    from which Improvado can extract data (e.g., Google Ads, Facebook Ads, Salesforce).'
+paths:
+  /api/v3/datasources:
+    get:
+      parameters: []
+      operationId: api_v3_datasources_list
+      summary: List data sources
+      description: Returns list of datasources available to connect to
+      tags:
+      - Data Sources
+      responses:
+        '200':
+          description: Get a list of DataSources
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaginatedDataSourceList'
+              examples:
+                datasources_list:
+                  value:
+                    count: 2
+                    next: null
+                    previous: null
+                    results:
+                    - name: google_sheets
+                      title: Google Sheets
+                      icons:
+                        res_300x200: https://example.com/icon_300x200.png
+                        res_40x40: https://example.com/icon_40x40.png
+                        res_20x20: https://example.com/icon_20x20.png
+                      categories:
+                      - Google
+                      - Spreadsheets
+                    - name: google_ads
+                      title: Google Ads
+                      icons:
+                        res_300x200: https://example.com/icon_300x200.png
+                        res_40x40: https://example.com/icon_40x40.png
+                        res_20x20: https://example.com/icon_20x20.png
+                      categories:
+                      - Advertising
+                      - Google
+                      - SEO & SEM
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      description: Error response object
+      properties:
+        detail:
+          type: string
+          description: Error message
+      examples:
+      - no_auth:
+          value:
+            detail: You do not have permission to perform this action.
+      - invalid_request:
+          value:
+            detail: Invalid request
+      - not_uniq_name:
+          value:
+            detail: Workspace with this title already exists
+    DataSource:
+      type: object
+      description: Data source object
+      properties:
+        name:
+          type: string
+          description: string identifier of datasource
+        title:
+          type: string
+          description: Data source title
+        icons:
+          type: object
+          properties:
+            res_300x200:
+              type: string
+              description: URL to the 300x200 icon
+            res_40x40:
+              type: string
+              description: URL to the 40x40 icon
+            res_20x20:
+              type: string
+              description: URL to the 20x20 icon
+        categories:
+          type: array
+          items:
+            type: string
+          description: List of categories that the data source belongs to
+      examples:
+      - datasource:
+          value:
+            name: google_sheets
+            title: Google Sheets
+            icons:
+              res_300x200: https://example.com/icon_300x200.png
+              res_40x40: https://example.com/icon_40x40.png
+              res_20x20: https://example.com/icon_20x20.png
+            categories:
+            - Google
+            - Spreadsheets
+    PaginatedDataSourceList:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Number of datasources
+        next:
+          type: string
+          description: URL to the next page
+        previous:
+          type: string
+          description: URL to the previous page
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataSource'
+      examples:
+      - datasources_list:
+          value:
+            count: 2
+            next: null
+            previous: null
+            results:
+            - name: google_sheets
+              title: Google Sheets
+              icons:
+                res_300x200: https://example.com/icon_300x200.png
+                res_40x40: https://example.com/icon_40x40.png
+                res_20x20: https://example.com/icon_20x20.png
+            - name: google_ads
+              title: Google Ads
+              icons:
+                res_300x200: https://example.com/icon_300x200.png
+                res_40x40: https://example.com/icon_40x40.png
+                res_20x20: https://example.com/icon_20x20.png
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    tokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Bearer
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: dts_session_id
+      description: Cookie authentication. When using this method, the HTTP_X_IM_WORKSPACE_ID header must be included with the workspace_id (integer) value.

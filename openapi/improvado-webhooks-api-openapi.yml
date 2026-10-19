@@ -1,0 +1,870 @@
+openapi: 3.2.0
+info:
+  title: Improvado Embedded API v3 Webhooks API
+  version: 3.0.0
+  description: 'Improvado Embedded API V3 provides programmatic access to data extraction, transformation, and loading capabilities.
+
+
+    ## Authentication
+
+
+    This API supports multiple authentication methods depending on the endpoint:
+
+
+    ### Basic Authentication
+
+    Used for workspace-agnostic operations such as:
+
+    - Creating access tokens (`POST /api/v3/token`)
+
+    - Listing workspaces (`GET /api/v3/workspaces`)
+
+    - Managing workspaces (`POST /api/v3/workspaces`, `GET /api/v3/workspaces/{id}`, `PUT /api/v3/workspaces/{id}`)
+
+    - Getting iframe URLs (`POST /api/v3/get_iframe_url`)
+
+    - Listing available recipes (`GET /api/v3/recipes/`)
+
+    etc.
+
+
+    **Format**: `Authorization: Basic `
+
+
+    ### Bearer Token Authentication
+
+    Used for workspace-scoped operations after obtaining a token from `/api/v3/token`. The token is scoped to a specific workspace.
+
+
+    **Format**: `Authorization: Bearer `
+
+
+    ### Cookie Authentication
+
+    Alternative to Bearer token for browser-based integrations. When using cookie authentication, you must include the workspace ID in the request header.
+
+
+    **Cookie**: `dts_session_id=`
+
+
+    **Required Header**: `X-IM-WORKSPACE-ID: `
+
+
+    ## Workspace Scoping
+
+
+    Most API operations are workspace-scoped. After authenticating with Basic Auth, obtain a workspace-specific token using `POST /api/v3/token` with the desired `workspace_id`. This token provides access only to resources within that workspace, ensuring isolation between different customers or projects.
+
+
+    ## Errors
+
+
+    The automated recipe operations under `/api/v3.1/automated-recipe*` and
+
+    `GET /api/v3.1/connections/{connection_id}/accounts/` return errors as
+
+    `{"code": "...", "message": "...", "details": {...}}`. Branch on `code`, never on the
+
+    message text. See Errors for the catalogue of codes and the shape of `details`.
+
+
+    All other operations return errors as `{"detail": "error description"}`.'
+servers:
+- url: https://embedded.improvado.io
+tags:
+- name: Webhooks
+  x-zudoku-collapsed: true
+  description: 'Manage webhook endpoints that receive event notifications from Improvado.
+
+
+    Webhooks let your application react to platform events (extraction completion, load completion, etc.)
+
+    in near real time, without polling. Each endpoint is workspace-scoped and subscribes to one or more
+
+    event types.
+
+
+    Lifecycle:
+
+    1. **Register** an endpoint with the URL of your receiver and the event types you care about.
+
+    Improvado returns an `id` and a `secret`, and the endpoint is created in `unverified` status.
+
+    2. **Verify** ownership by calling the verify action. Improvado sends a GET request to your URL with
+
+    `X-Improvado-Verify-Token` and `X-Improvado-Challenge` headers. Your receiver must respond with HTTP 200
+
+    and the challenge value as the response body. After successful verification the endpoint moves to `active`.
+
+    3. **Receive events.** Improvado POSTs JSON payloads `{id, type, timestamp, data}` to your URL.
+
+    Each request is signed with HMAC-SHA256 in the `X-Improvado-Signature` header (using the endpoint''s
+
+    secret) and includes `X-Improvado-Idempotency-Key` for safe retry handling.
+
+    4. **Rotate the secret** at any time. Rotation invalidates the previous secret immediately and resets the
+
+    endpoint to `unverified` until you re-verify.
+
+
+    Failed deliveries are retried up to four times with backoff `[0s, 2s, 5s, 10s]`. Receivers should aim to
+
+    respond within a few seconds and return 2xx for successful processing.'
+paths:
+  /api/v3/webhook_endpoints/:
+    get:
+      operationId: api_v3_webhook_endpoints_list
+      summary: List webhook endpoints
+      description: List webhook endpoints registered in the current workspace.
+      tags:
+      - Webhooks
+      responses:
+        '200':
+          description: A paginated list of webhook endpoints
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWebhookEndpointList'
+              examples:
+                webhook_endpoints_list:
+                  value:
+                    count: 1
+                    next: null
+                    previous: null
+                    results:
+                    - id: 42
+                      url: https://customer.example.com/improvado/webhooks
+                      status: active
+                      consecutive_failures: 0
+                      subscriptions_count: 2
+                      created_at: 2026-04-25 10:15:00+00:00
+                      updated_at: 2026-04-25 10:18:00+00:00
+        '401':
+          description: Authentication credentials were not provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Embedded API is not enabled for this agency, or workspace header is missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    post:
+      operationId: api_v3_webhook_endpoints_create
+      summary: Create a webhook endpoint
+      description: 'Register a new webhook endpoint and subscribe it to one or more event types. The endpoint is created
+
+        in `unverified` status and a fresh `secret` is returned in the response. Use the `verify` action to
+
+        activate the endpoint.
+
+
+        > **Important:** `event_types` must contain identifiers returned by `GET /api/v3/webhook_event_types/`
+
+        > (e.g. `load_completed`, `transformation_completed`). Unknown event names are accepted by the
+
+        > request but no deliveries will be sent for them — always source the names from the event types
+
+        > endpoint rather than hard-coding them.'
+      tags:
+      - Webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookEndpointCreateRequest'
+            examples:
+              create_endpoint:
+                value:
+                  url: https://customer.example.com/improvado/webhooks
+                  event_types:
+                  - load_completed
+                  - transformation_completed
+      responses:
+        '201':
+          description: Webhook endpoint created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEndpointDetail'
+              examples:
+                created:
+                  value:
+                    id: 42
+                    url: https://customer.example.com/improvado/webhooks
+                    secret: 1f9e4b3a8c2d6e0f7a5b9c1d3e2f4a6b8c0d2e4f6a8b0c2d4e6f8a0b2c4d6e8f
+                    status: unverified
+                    consecutive_failures: 0
+                    subscriptions:
+                    - id: 100
+                      event_type_name: load_completed
+                      is_active: true
+                      created_at: 2026-04-25 10:15:00+00:00
+                    - id: 101
+                      event_type_name: transformation_completed
+                      is_active: true
+                      created_at: 2026-04-25 10:15:00+00:00
+                    created_at: 2026-04-25 10:15:00+00:00
+                    updated_at: 2026-04-25 10:15:00+00:00
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_url:
+                  value:
+                    url:
+                    - Enter a valid URL.
+        '401':
+          description: Authentication credentials were not provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Embedded API is not enabled for this agency, or workspace header is missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/webhook_endpoints/{id}/:
+    get:
+      operationId: api_v3_webhook_endpoints_retrieve
+      summary: Get a webhook endpoint
+      description: Retrieve detailed information about a webhook endpoint, including its current subscriptions and signing secret.
+      tags:
+      - Webhooks
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Webhook endpoint ID
+      responses:
+        '200':
+          description: Webhook endpoint detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEndpointDetail'
+        '401':
+          description: Authentication credentials were not provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhook endpoint not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    patch:
+      operationId: api_v3_webhook_endpoints_partial_update
+      summary: Update a webhook endpoint
+      description: 'Partially update a webhook endpoint. Either field may be omitted.
+
+
+        - Setting `event_types` **replaces** the full list of subscriptions for this endpoint.
+
+        - Updating either field resets the endpoint status to `unverified`; you must call `verify` again before the endpoint will receive events.'
+      tags:
+      - Webhooks
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Webhook endpoint ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookEndpointUpdateRequest'
+            examples:
+              update_url:
+                value:
+                  url: https://customer.example.com/improvado/webhooks/v2
+              replace_subscriptions:
+                value:
+                  event_types:
+                  - load_completed
+      responses:
+        '200':
+          description: Webhook endpoint updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEndpointDetail'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication credentials were not provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhook endpoint not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    delete:
+      operationId: api_v3_webhook_endpoints_destroy
+      summary: Delete a webhook endpoint
+      description: Permanently delete a webhook endpoint and all of its subscriptions. Pending and in-flight deliveries for this endpoint are abandoned.
+      tags:
+      - Webhooks
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Webhook endpoint ID
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          description: Authentication credentials were not provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhook endpoint not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/webhook_endpoints/{id}/verify/:
+    post:
+      operationId: api_v3_webhook_endpoints_verify
+      summary: Verify a webhook endpoint
+      description: 'Trigger ownership verification of the endpoint URL.
+
+
+        Improvado sends a `GET` request to the endpoint URL with the headers:
+
+
+        - `X-Improvado-Verify-Token` — the endpoint''s signing secret
+
+        - `X-Improvado-Challenge` — a one-time random token
+
+
+        The receiver must respond with HTTP 200 and the value of `X-Improvado-Challenge` as the response body.
+
+        On success, the endpoint transitions to `active`. On failure (non-200 status, mismatching body, or
+
+        connection error), the endpoint remains `unverified` and a 400 is returned.'
+      tags:
+      - Webhooks
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Webhook endpoint ID
+      responses:
+        '200':
+          description: Endpoint verified successfully (status is now `active`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEndpointDetail'
+        '400':
+          description: Verification failed (unreachable URL, non-200 response, or challenge mismatch)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                challenge_mismatch:
+                  value:
+                    detail: Challenge response did not match
+                unreachable:
+                  value:
+                    detail: Failed to reach endpoint. Please check the URL and try again.
+                non_200_response:
+                  value:
+                    detail: Endpoint returned status 500, expected 200
+        '401':
+          description: Authentication credentials were not provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhook endpoint not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/webhook_endpoints/{id}/regenerate_secret/:
+    post:
+      operationId: api_v3_webhook_endpoints_regenerate_secret
+      summary: Rotate the signing secret
+      description: 'Generate a new signing secret for the endpoint. The previous secret is invalidated immediately and
+
+        the endpoint is reset to `unverified` status, so the endpoint must be re-verified before it will
+
+        receive further events. Update your receiver to use the new secret before re-verification.'
+      tags:
+      - Webhooks
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Webhook endpoint ID
+      responses:
+        '200':
+          description: Secret rotated; the new secret is in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEndpointDetail'
+        '401':
+          description: Authentication credentials were not provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhook endpoint not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/webhook_event_types/:
+    get:
+      operationId: api_v3_webhook_event_types_list
+      summary: List available webhook event types
+      description: List event types that can be subscribed to via `event_types` when creating or updating a webhook endpoint.
+      tags:
+      - Webhooks
+      responses:
+        '200':
+          description: List of supported event types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WebhookEventType'
+              examples:
+                event_types_list:
+                  value:
+                  - event_name: load_completed
+                  - event_name: load_started
+                  - event_name: transformation_completed
+                  - event_name: transformation_started
+                  - event_name: extraction_created
+                  - event_name: extraction_paused
+        '401':
+          description: Authentication credentials were not provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      description: Error response object
+      properties:
+        detail:
+          type: string
+          description: Error message
+      examples:
+      - no_auth:
+          value:
+            detail: You do not have permission to perform this action.
+      - invalid_request:
+          value:
+            detail: Invalid request
+      - not_uniq_name:
+          value:
+            detail: Workspace with this title already exists
+    WebhookSubscription:
+      type: object
+      description: A subscription that links a webhook endpoint to a specific event type.
+      properties:
+        id:
+          type: integer
+          description: Subscription ID
+        event_type_name:
+          type: string
+          description: Name of the event type this subscription receives
+        is_active:
+          type: boolean
+          description: Whether the subscription is active
+        created_at:
+          type: string
+          format: date-time
+          description: When the subscription was created
+    WebhookEndpointUpdateRequest:
+      type: object
+      description: 'Partial update payload. Either field may be omitted. Setting `event_types` replaces the full set of
+
+        subscriptions for the endpoint. Updating either field resets the endpoint to `unverified`.
+
+        '
+      properties:
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+        event_types:
+          type: array
+          items:
+            type: string
+            maxLength: 64
+    WebhookEndpointDetail:
+      type: object
+      description: 'Full webhook endpoint representation, including the signing secret and the list of subscriptions.
+
+
+        The `secret` is used to compute the `X-Improvado-Signature` header (HMAC-SHA256) on every event delivery
+
+        and as the verification token during the verify flow. Treat it as sensitive and store it securely.
+
+        '
+      properties:
+        id:
+          type: integer
+        url:
+          type: string
+          format: uri
+        secret:
+          type: string
+          description: 64-character hex signing secret
+        status:
+          type: string
+          enum:
+          - unverified
+          - active
+        consecutive_failures:
+          type: integer
+        subscriptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookSubscription'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    WebhookEventType:
+      type: object
+      description: An event type that can be subscribed to.
+      properties:
+        event_name:
+          type: string
+          description: Identifier of the event type (used in `event_types` when creating subscriptions)
+          enum:
+          - account_created
+          - account_disabled
+          - account_disabled_for_copied_connection
+          - account_enabled
+          - account_enabled_for_copied_connection
+          - account_item_changed
+          - account_name_changed
+          - additional_params_changed
+          - agency_created
+          - agency_invite_created
+          - agency_is_test_changed
+          - agency_migrated_to_workspace_separated_schemas
+          - agency_offboarded
+          - agency_toggle
+          - connection_accounts_update_error
+          - connection_accounts_update_fail
+          - connection_accounts_update_started
+          - connection_accounts_update_success
+          - connection_created
+          - connection_deleted
+          - connection_invalidated
+          - connection_privacy_updated
+          - connection_reconnected
+          - create_load_changed
+          - custom_filters_changed
+          - data_table_created
+          - data_table_marked_as_deleting
+          - destination_connection_changed
+          - destination_connection_check_run
+          - destination_connection_created
+          - destination_connection_deleted
+          - enabled_for_embedded_extraction_changed
+          - error_changed
+          - error_text_changed
+          - execution_policy_changed
+          - extraction_account_changed
+          - extraction_added
+          - extraction_completed
+          - extraction_created
+          - extraction_marked_as_deleting
+          - extraction_paused
+          - extraction_schedules_changed
+          - extraction_template_changed
+          - extraction_unpaused
+          - fields_changed
+          - gbq_by_improvado_created
+          - gbq_by_improvado_for_sandbox_created
+          - historical_download_started
+          - invite_accepted
+          - invite_deleted
+          - invite_sent
+          - load_completed
+          - load_created
+          - load_started
+          - order_paused
+          - order_started
+          - recipe_activated
+          - recipe_backward_compatibility_validated
+          - recipe_backward_compatibility_validation_failed
+          - recipe_backward_compatibility_validation_skipped
+          - recipe_columns_validated
+          - recipe_deactivated
+          - recipe_promoted
+          - recipe_validate_complexity_failed
+          - recipe_validate_complexity_success
+          - recipe_view_name_updated
+          - regular_download_started
+          - run_policy_changed
+          - schedules_changed
+          - secret_key_changed
+          - status_changed
+          - sync_historical_data_changed
+          - table_auto_add_new_fields_changed
+          - table_auto_extract_new_accounts_changed
+          - table_extract_template_changed
+          - table_freshness_changed
+          - table_meta_set
+          - table_sql_available_at_changed
+          - table_title_changed
+          - title_changed
+          - transformation_completed
+          - transformation_created
+          - transformation_started
+          - user_added_to_workspace
+          - user_deactivated
+          - user_invited_to_workspaces
+          - user_removed_from_workspace
+          - user_workspace_role_changed
+          - workspace_connector_changed
+          - workspace_created
+    PaginatedWebhookEndpointList:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type:
+          - string
+          - 'null'
+        previous:
+          type:
+          - string
+          - 'null'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookEndpointListItem'
+    WebhookEndpointCreateRequest:
+      type: object
+      required:
+      - url
+      properties:
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+          description: HTTPS URL of the receiver that will accept event deliveries.
+        event_types:
+          type: array
+          description: 'Event types this endpoint will subscribe to. See `GET /api/v3/webhook_event_types/` for the list of
+
+            available event names. Duplicates are deduplicated server-side. May be empty.
+
+            '
+          items:
+            type: string
+            maxLength: 64
+            enum:
+            - account_created
+            - account_disabled
+            - account_disabled_for_copied_connection
+            - account_enabled
+            - account_enabled_for_copied_connection
+            - account_item_changed
+            - account_name_changed
+            - additional_params_changed
+            - agency_created
+            - agency_invite_created
+            - agency_is_test_changed
+            - agency_migrated_to_workspace_separated_schemas
+            - agency_offboarded
+            - agency_toggle
+            - connection_accounts_update_error
+            - connection_accounts_update_fail
+            - connection_accounts_update_started
+            - connection_accounts_update_success
+            - connection_created
+            - connection_deleted
+            - connection_invalidated
+            - connection_privacy_updated
+            - connection_reconnected
+            - create_load_changed
+            - custom_filters_changed
+            - data_table_created
+            - data_table_marked_as_deleting
+            - destination_connection_changed
+            - destination_connection_check_run
+            - destination_connection_created
+            - destination_connection_deleted
+            - enabled_for_embedded_extraction_changed
+            - error_changed
+            - error_text_changed
+            - execution_policy_changed
+            - extraction_account_changed
+            - extraction_added
+            - extraction_completed
+            - extraction_created
+            - extraction_marked_as_deleting
+            - extraction_paused
+            - extraction_schedules_changed
+            - extraction_template_changed
+            - extraction_unpaused
+            - fields_changed
+            - gbq_by_improvado_created
+            - gbq_by_improvado_for_sandbox_created
+            - historical_download_started
+            - invite_accepted
+            - invite_deleted
+            - invite_sent
+            - load_completed
+            - load_created
+            - load_started
+            - order_paused
+            - order_started
+            - recipe_activated
+            - recipe_backward_compatibility_validated
+            - recipe_backward_compatibility_validation_failed
+            - recipe_backward_compatibility_validation_skipped
+            - recipe_columns_validated
+            - recipe_deactivated
+            - recipe_promoted
+            - recipe_validate_complexity_failed
+            - recipe_validate_complexity_success
+            - recipe_view_name_updated
+            - regular_download_started
+            - run_policy_changed
+            - schedules_changed
+            - secret_key_changed
+            - status_changed
+            - sync_historical_data_changed
+            - table_auto_add_new_fields_changed
+            - table_auto_extract_new_accounts_changed
+            - table_extract_template_changed
+            - table_freshness_changed
+            - table_meta_set
+            - table_sql_available_at_changed
+            - table_title_changed
+            - title_changed
+            - transformation_completed
+            - transformation_created
+            - transformation_started
+            - user_added_to_workspace
+            - user_deactivated
+            - user_invited_to_workspaces
+            - user_removed_from_workspace
+            - user_workspace_role_changed
+            - workspace_connector_changed
+            - workspace_created
+    WebhookEndpointListItem:
+      type: object
+      description: Compact webhook endpoint representation used in list responses.
+      properties:
+        id:
+          type: integer
+          description: Webhook endpoint ID
+        url:
+          type: string
+          format: uri
+          description: Receiver URL
+        status:
+          type: string
+          enum:
+          - unverified
+          - active
+          description: 'Endpoint lifecycle status. `unverified` endpoints do not receive event deliveries.
+
+            '
+        consecutive_failures:
+          type: integer
+          description: Number of consecutive failed deliveries since the last successful delivery
+        subscriptions_count:
+          type: integer
+          description: Number of event types this endpoint is subscribed to
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    tokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Bearer
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: dts_session_id
+      description: Cookie authentication. When using this method, the HTTP_X_IM_WORKSPACE_ID header must be included with the workspace_id (integer) value.

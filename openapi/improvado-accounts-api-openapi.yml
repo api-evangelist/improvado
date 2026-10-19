@@ -1,0 +1,821 @@
+openapi: 3.2.0
+info:
+  title: Improvado Embedded API v3 Accounts API
+  version: 3.0.0
+  description: 'Improvado Embedded API V3 provides programmatic access to data extraction, transformation, and loading capabilities.
+
+
+    ## Authentication
+
+
+    This API supports multiple authentication methods depending on the endpoint:
+
+
+    ### Basic Authentication
+
+    Used for workspace-agnostic operations such as:
+
+    - Creating access tokens (`POST /api/v3/token`)
+
+    - Listing workspaces (`GET /api/v3/workspaces`)
+
+    - Managing workspaces (`POST /api/v3/workspaces`, `GET /api/v3/workspaces/{id}`, `PUT /api/v3/workspaces/{id}`)
+
+    - Getting iframe URLs (`POST /api/v3/get_iframe_url`)
+
+    - Listing available recipes (`GET /api/v3/recipes/`)
+
+    etc.
+
+
+    **Format**: `Authorization: Basic `
+
+
+    ### Bearer Token Authentication
+
+    Used for workspace-scoped operations after obtaining a token from `/api/v3/token`. The token is scoped to a specific workspace.
+
+
+    **Format**: `Authorization: Bearer `
+
+
+    ### Cookie Authentication
+
+    Alternative to Bearer token for browser-based integrations. When using cookie authentication, you must include the workspace ID in the request header.
+
+
+    **Cookie**: `dts_session_id=`
+
+
+    **Required Header**: `X-IM-WORKSPACE-ID: `
+
+
+    ## Workspace Scoping
+
+
+    Most API operations are workspace-scoped. After authenticating with Basic Auth, obtain a workspace-specific token using `POST /api/v3/token` with the desired `workspace_id`. This token provides access only to resources within that workspace, ensuring isolation between different customers or projects.
+
+
+    ## Errors
+
+
+    The automated recipe operations under `/api/v3.1/automated-recipe*` and
+
+    `GET /api/v3.1/connections/{connection_id}/accounts/` return errors as
+
+    `{"code": "...", "message": "...", "details": {...}}`. Branch on `code`, never on the
+
+    message text. See Errors for the catalogue of codes and the shape of `details`.
+
+
+    All other operations return errors as `{"detail": "error description"}`.'
+servers:
+- url: https://embedded.improvado.io
+tags:
+- name: Accounts
+  x-zudoku-collapsed: true
+  description: 'Manage connection accounts from which data is extracted.
+
+
+    Accounts represent specific accounts within a data source platform.
+
+    Each account is associated with a connection and can have multiple extracts configured to pull data from it.'
+paths:
+  /api/v3/connections/{connection_id}/accounts:
+    get:
+      operationId: api_v3_connection_accounts_list
+      summary: List accounts for connection
+      description: 'List accounts for connection.
+
+
+        When you configure a recipe through the v3.1 API, take the account `id` values from List connection accounts (v3.1), not from this operation: for some agencies this operation returns different keys, and `PUT /api/v3.1/automated-recipes/{recipe_id}/` rejects them with `account_unavailable`.'
+      tags:
+      - Accounts
+      parameters:
+      - in: path
+        name: connection_id
+        schema:
+          type: integer
+        required: true
+        description: Connection ID
+        examples:
+          connection_accounts_list:
+            value:
+              connection_id: 1
+          wrong_connection_id:
+            value:
+              connection_id: 999
+      responses:
+        '200':
+          description: Get a list of Accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaginatedAccountList'
+              examples:
+                connection_accounts_list:
+                  value:
+                    count: 2
+                    next: null
+                    previous: null
+                    results:
+                    - id: 1
+                      account_id: 12345678-1234-5678-1234-567812345678
+                      title: Account 1
+                      currency: USD
+                      connection_id: 1
+                      datasource_name: google_sheets
+                      created_at: 2021-01-01 00:00:00+00:00
+                      updated_at: 2021-01-01 00:00:00+00:00
+                      is_active: true
+                      enabled_for_embedded_extraction: true
+                      item:
+                        currency: USD
+                        advertiser_status: ACTIVE
+                    - id: 2
+                      account_id: 12345678-1234-5678-1234-567812345678
+                      title: Account 2
+                      currency: USD
+                      connection_id: 2
+                      datasource_name: google_ads
+                      created_at: 2021-01-01 00:00:00+00:00
+                      updated_at: 2021-01-01 00:00:00+00:00
+                      is_active: true
+                      enabled_for_embedded_extraction: true
+                      item:
+                        currency: USD
+                        advertiser_status: ACTIVE
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_connection_id:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Connection not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    patch:
+      operationId: api_v3_connection_accounts_update
+      summary: Update accounts
+      tags:
+      - Accounts
+      parameters:
+      - in: path
+        name: connection_id
+        schema:
+          type: integer
+        required: true
+        description: Connection ID
+        examples:
+          connection_accounts_update:
+            value:
+              connection_id: 1
+          wrong_connection_id:
+            value:
+              connection_id: 999
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    description: Account ID
+                  enabled_for_embedded_extraction:
+                    type: boolean
+                    description: Enabled for embedded extraction
+            examples:
+              connection_accounts_update:
+                value:
+                - id: 1
+                  enabled_for_embedded_extraction: true
+                - id: 2
+                  enabled_for_embedded_extraction: false
+              wrong_account_ids:
+                value:
+                - id: 3
+                  enabled_for_embedded_extraction: true
+                - id: 4
+                  enabled_for_embedded_extraction: false
+      responses:
+        '200':
+          description: Update Accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+              examples:
+                connection_accounts_update:
+                  value:
+                  - id: 1
+                    account_id: 12345678-1234-5678-1234-567812345678
+                    title: Account 1
+                    currency: USD
+                    connection_id: 1
+                    datasource_name: google_sheets
+                    created_at: 2021-01-01 00:00:00+00:00
+                    updated_at: 2021-01-01 00:00:00+00:00
+                    is_active: true
+                    enabled_for_embedded_extraction: true
+                  - id: 2
+                    account_id: 12345678-1234-5678-1234-567812345678
+                    title: Account 2
+                    currency: USD
+                    connection_id: 2
+                    datasource_name: google_ads
+                    created_at: 2021-01-01 00:00:00+00:00
+                    updated_at: 2021-01-01 00:00:00+00:00
+                    is_active: true
+                    enabled_for_embedded_extraction: false
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_account_ids:
+                  value:
+                    detail: Account 3 was not found in specified connection
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Connection not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3.1/connections/{connection_id}/accounts/:
+    get:
+      operationId: api_v3_1_connection_accounts_list
+      x-codeSamples:
+      - lang: shell
+        label: cURL
+        source: "curl 'https://embedded.improvado.io/api/v3.1/connections/187/accounts/?page_size=100' \\\n  -H \"Authorization: Bearer $TOKEN\"\n"
+      summary: List connection accounts (v3.1)
+      description: 'Lists the accounts of one connection in the workspace your token belongs to, sorted by `id`. Use it to pick the accounts a recipe extracts from.
+
+
+        The `id` values returned here are the ones `PUT /api/v3.1/automated-recipes/{recipe_id}/` accepts in `connections[].accounts[]`. Only accounts with `is_active: true` can be used there; the others are rejected with `account_unavailable`.
+
+
+        The trailing slash is mandatory on this path, unlike the v3 accounts operation.
+
+
+        The page holds 100 accounts by default and 100 at most; `next` and `previous` are full v3.1 URLs.'
+      tags:
+      - Accounts
+      parameters:
+      - in: path
+        name: connection_id
+        schema:
+          type: integer
+        required: true
+        description: Connection identifier, as returned by the connection list.
+        examples:
+          connection_accounts_v31:
+            value: 187
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: 'Case-insensitive substring of the account title. A value made only of digits also matches the account whose `id` is exactly that number. An empty or blank value applies no filter and is not rejected, unlike `search` on the recipe template list.
+
+          '
+        required: false
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+        description: 'Page number, starting at 1. A page beyond the last one is rejected with 400 `invalid_query_parameter`, not answered with an empty list.
+
+          '
+        required: false
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+          default: 100
+          maximum: 100
+        description: 'Accounts per page, from 1 to 100. A larger value is rejected with 400 `invalid_query_parameter`; it is not silently capped.
+
+          '
+        required: false
+      responses:
+        '200':
+          description: One page of connection accounts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionAccountPageV31'
+              examples:
+                connection_accounts_page:
+                  summary: Two accounts of one connection
+                  value:
+                    count: 2
+                    next: null
+                    previous: null
+                    results:
+                    - id: 90412
+                      title: Northwind - Brand
+                      connection_id: 187
+                      datasource_name: facebook
+                      is_active: true
+                      enabled_for_embedded_extraction: true
+                      currency: USD
+                      additional_params: {}
+                      created_at: 2026-02-19 08:41:05+00:00
+                      updated_at: 2026-07-30 13:02:58+00:00
+                    - id: 90415
+                      title: Northwind - Retargeting
+                      connection_id: 187
+                      datasource_name: facebook
+                      is_active: false
+                      enabled_for_embedded_extraction: false
+                      currency: null
+                      additional_params: {}
+                      created_at: 2026-02-19 08:41:05+00:00
+                      updated_at: 2026-06-11 10:17:22+00:00
+        '400':
+          description: 'A query parameter has a value this operation does not accept, or the request could not be processed at all. `bad_request` is the catch-all code for a 4xx that has no code of its own, so the same envelope can arrive with another 4xx status, for example 415.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                invalid_query_parameter:
+                  summary: A page size above 100 was requested
+                  value:
+                    code: invalid_query_parameter
+                    message: A query parameter has an invalid value.
+                    details:
+                      parameter: page_size
+                      allowed_values: []
+                bad_request:
+                  summary: The request could not be processed
+                  value:
+                    code: bad_request
+                    message: The request could not be processed.
+                    details: {}
+        '401':
+          description: The bearer token is missing, invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                authentication_failed:
+                  value:
+                    code: authentication_failed
+                    message: 'Authentication failed: the token is missing, invalid or expired.'
+                    details: {}
+        '403':
+          description: The caller is authenticated but this operation is not available to them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                permission_denied:
+                  value:
+                    code: permission_denied
+                    message: This operation is not available to you.
+                    details: {}
+        '404':
+          description: 'No such connection in this workspace. The same answer covers a connection that never existed, one that was deleted and one that belongs to another workspace.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    message: Connection not found.
+                    details: {}
+        '405':
+          description: The HTTP method is not supported on this path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                method_not_allowed:
+                  value:
+                    code: method_not_allowed
+                    message: Method not allowed.
+                    details: {}
+        '500':
+          description: Something failed on our side. The request was not served; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                internal_error:
+                  value:
+                    code: internal_error
+                    message: An internal error occurred.
+                    details: {}
+        '503':
+          description: 'Temporarily unavailable. The response carries the header `Retry-After: 30`, so wait 30 seconds and repeat the request.
+
+            '
+          headers:
+            Retry-After:
+              description: How many seconds to wait before repeating the request. Always `30`.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                service_unavailable:
+                  value:
+                    code: service_unavailable
+                    message: The service is temporarily unavailable. Re-read the resource, then retry.
+                    details: {}
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/connections/{connection_id}/accounts/{account_id}:
+    patch:
+      operationId: api_v3_connection_account_update
+      summary: Update an account
+      tags:
+      - Accounts
+      parameters:
+      - in: path
+        name: connection_id
+        schema:
+          type: integer
+        required: true
+        description: Connection ID
+        examples:
+          connection_account_update:
+            value:
+              connection_id: 1
+          wrong_connection_id:
+            value:
+              connection_id: 999
+      - in: path
+        name: account_id
+        schema:
+          type: integer
+        required: true
+        description: Account ID
+        examples:
+          connection_account_update:
+            value:
+              account_id: 1
+          wrong_account_id:
+            value:
+              account_id: 99999999
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled_for_embedded_extraction:
+                  type: boolean
+                  description: Enabled for embedded extraction
+            examples:
+              connection_account_update:
+                value:
+                  enabled_for_embedded_extraction: true
+      responses:
+        '200':
+          description: Update an Account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+              examples:
+                connection_account_update:
+                  value:
+                    id: 1
+                    account_id: 12345678-1234-5678-1234-567812345678
+                    title: Account 1
+                    currency: USD
+                    connection_id: 1
+                    datasource_name: google_sheets
+                    created_at: 2021-01-01 00:00:00+00:00
+                    updated_at: 2021-01-01 00:00:00+00:00
+                    is_active: true
+                    enabled_for_embedded_extraction: true
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Account not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+components:
+  schemas:
+    ConnectionAccountV31:
+      type: object
+      description: 'One account of a connection in the workspace of your token. This is the operation to take account identifiers from when you configure a recipe.
+
+        '
+      properties:
+        id:
+          type: integer
+          description: 'Account identifier. This is the only identifier a v3.1 recipe accepts in `connections[].accounts[].id`, and it is specific to this workspace.
+
+            '
+        title:
+          type: string
+          description: Account name.
+        connection_id:
+          type: integer
+          description: The connection this account belongs to.
+        datasource_name:
+          type: string
+          description: Data source of the connection, for example `facebook`.
+        is_active:
+          type: boolean
+          description: 'Whether the account is switched on. Only accounts with `is_active: true` can be put in a recipe; the rest are rejected when you configure one.
+
+            '
+        enabled_for_embedded_extraction:
+          type: boolean
+          description: Whether this account is enabled for extraction through the embedded API.
+        currency:
+          type:
+          - string
+          - 'null'
+          description: Currency of the account, or `null` when it has none.
+        additional_params:
+          type: object
+          description: 'Extra account settings, as set through the accounts update operation. `{}` when there are none.
+
+            '
+        created_at:
+          type: string
+          format: date-time
+          description: When the account was created.
+        updated_at:
+          type: string
+          format: date-time
+          description: When the account was last changed.
+    Account:
+      type: object
+      description: Account object
+      properties:
+        id:
+          type: integer
+          description: Account ID
+        account_id:
+          type: string
+          description: Remote account ID
+        title:
+          type: string
+          description: Account title
+        currency:
+          type: string
+          description: Account currency
+        connection_id:
+          type: integer
+          description: Connection ID
+        datasource_name:
+          type: string
+          description: Data source name
+        created_at:
+          type: string
+          description: Account creation date
+        updated_at:
+          type: string
+          description: Account update date
+        is_active:
+          type: boolean
+          description: Is the account active
+        enabled_for_embedded_extraction:
+          type: boolean
+          description: Is the account enabled for embedded extraction
+        item:
+          type: object
+          description: Data source-specific account item information
+          additionalProperties: true
+      examples:
+      - account:
+          value:
+            id: 1
+            account_id: 12345678-1234-5678-1234-567812345678
+            title: Account 1
+            currency: USD
+            connection_id: 1
+            datasource_name: google_sheets
+            created_at: 2021-01-01 00:00:00+00:00
+            updated_at: 2021-01-01 00:00:00+00:00
+            is_active: true
+            enabled_for_embedded_extraction: true
+            item:
+              currency: USD
+              advertiser_status: ACTIVE
+    ErrorResponse:
+      type: object
+      description: Error response object
+      properties:
+        detail:
+          type: string
+          description: Error message
+      examples:
+      - no_auth:
+          value:
+            detail: You do not have permission to perform this action.
+      - invalid_request:
+          value:
+            detail: Invalid request
+      - not_uniq_name:
+          value:
+            detail: Workspace with this title already exists
+    ConnectionAccountPageV31:
+      type: object
+      description: One page of connection accounts.
+      properties:
+        count:
+          type: integer
+          description: Total number of accounts matching the request.
+        next:
+          type:
+          - string
+          - 'null'
+          description: Full URL of the next page, or `null` on the last page.
+        previous:
+          type:
+          - string
+          - 'null'
+          description: Full URL of the previous page, or `null` on the first page.
+        results:
+          type: array
+          description: Accounts on this page.
+          items:
+            $ref: '#/components/schemas/ConnectionAccountV31'
+    PaginatedAccountList:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Number of accounts
+        next:
+          type: string
+          description: URL to the next page
+        previous:
+          type: string
+          description: URL to the previous page
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Account'
+      examples:
+      - accounts_list:
+          value:
+            count: 2
+            next: null
+            previous: null
+            results:
+            - id: 1
+              account_id: 12345678-1234-5678-1234-567812345678
+              title: Account 1
+              currency: USD
+              connection_id: 1
+              datasource_name: google_sheets
+              created_at: 2021-01-01 00:00:00+00:00
+              updated_at: 2021-01-01 00:00:00+00:00
+              is_active: true
+              enabled_for_embedded_extraction: true
+            - id: 2
+              account_id: 12345678-1234-5678-1234-567812345678
+              title: Account 2
+              currency: USD
+              connection_id: 2
+              datasource_name: google_ads
+              created_at: 2021-01-01 00:00:00+00:00
+              updated_at: 2021-01-01 00:00:00+00:00
+              is_active: true
+              enabled_for_embedded_extraction: true
+    ErrorEnvelope:
+      type: object
+      description: 'The error body of every v3.1 automated recipe operation and of the v3.1 connection accounts operation. All three fields are always present. See [Errors](/errors) for the full catalogue of codes.
+
+        '
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code. Branch on this, never on the message.
+        message:
+          type: string
+          description: Human-readable text. Wording may change; it is not part of the contract.
+        details:
+          type: object
+          description: 'Always present, always an object. Its shape depends on the code; codes that carry no extra data return an empty object. See [Errors](/errors).
+
+            '
+      required:
+      - code
+      - message
+      - details
+      examples:
+      - not_found:
+          value:
+            code: not_found
+            message: Recipe not found.
+            details: {}
+      - invalid_query_parameter:
+          value:
+            code: invalid_query_parameter
+            message: A query parameter has an invalid value.
+            details:
+              parameter: state
+              allowed_values:
+              - extracting_data
+              - building_dependencies
+              - ready_to_work
+              - failed
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    tokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Bearer
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: dts_session_id
+      description: Cookie authentication. When using this method, the HTTP_X_IM_WORKSPACE_ID header must be included with the workspace_id (integer) value.

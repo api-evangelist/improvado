@@ -67,10 +67,11 @@ tags:
 - Agent Readiness
 apis:
 - name: Improvado Embedded API v3
-  description: Workspace-scoped REST API for embedding Improvado's data extraction, transformation, and
-    load pipeline into agency and platform products. Manages data sources, connections, accounts, extraction
-    templates, extracts, destinations, data tables, loads, automated recipes, custom roles, and webhook
-    endpoints. Basic auth for workspace management; 30-minute Bearer tokens for workspace-scoped resources.
+  description: >-
+    Workspace-scoped REST API for embedding Improvado's data extraction, transformation, and load pipeline
+    into agency and platform products. Manages data sources, connections, accounts, extraction templates,
+    extracts, destinations, data tables, loads, automated recipes, custom roles, and webhook endpoints.
+    Basic auth for workspace management; 30-minute Bearer tokens for workspace-scoped resources.
   humanURL: https://developers.improvado.io/api
   baseURL: https://embedded.improvado.io
   tags:
@@ -109,15 +110,15 @@ apis:
   - type: Components
     url: components/improvado-components.yml
 - name: Improvado Customer MCP
-  description: 'Hosted, remote Model Context Protocol server exposing Improvado''s marketing data platform
-    to any MCP client (Claude, ChatGPT/Codex, Gemini CLI, Antigravity, Cursor) as 83 published tools across
-    twelve categories: warehouse SQL, live Discovery API passthrough to 1,000+ upstream ad and analytics
-    platforms, ETL extract/load/run management, custom Temporal pipelines, Marketing Data Governance rules,
-    AI recipes and notebooks, dashboards, documents and workspace control. JSON-RPC 2.0 over HTTP, gated
-    by OAuth 2.0 (authorization code + PKCE, scope mcp:customer) against the customer''s existing Improvado
-    account, with workspace-scoped 15-minute sessions. The endpoint host is the customer''s own tenant
-    domain. Metered and sold: MCP actions per week is a priced quota on every plan tier including the
-    free one.'
+  description: >-
+    Hosted, remote Model Context Protocol server exposing Improvado's marketing data platform to any MCP
+    client (Claude, ChatGPT/Codex, Gemini CLI, Antigravity, Cursor) as 83 published tools across twelve
+    categories: warehouse SQL, live Discovery API passthrough to 1,000+ upstream ad and analytics platforms,
+    ETL extract/load/run management, custom Temporal pipelines, Marketing Data Governance rules, AI recipes
+    and notebooks, dashboards, documents and workspace control. JSON-RPC 2.0 over HTTP, gated by OAuth
+    2.0 (authorization code + PKCE, scope mcp:customer) against the customer's existing Improvado account,
+    with workspace-scoped 15-minute sessions. The endpoint host is the customer's own tenant domain. Metered
+    and sold: MCP actions per week is a priced quota on every plan tier including the free one.
   humanURL: https://improvado.io/docs-section-topic/improvado-mcp
   baseURL: https://report.improvado.io
   tags:
@@ -141,16 +142,624 @@ apis:
     url: plans/improvado-plans-pricing.yml
   - type: SourceCode
     url: https://github.com/tekliner/improvado-agentic-frameworks-and-skills
-- aid: improvado:improvado-ask-api
-  name: Improvado Ask API
-  description: The Ask API from Improvado — 1 operation(s) for ask.
+- aid: improvado:improvado-accounts-api
+  name: Improvado Accounts API
+  description: >-
+    Manage connection accounts from which data is extracted.
+
+
+    Accounts represent specific accounts within a data source platform.
+
+    Each account is associated with a connection and can have multiple extracts configured to pull data
+    from it.
   humanURL: https://developers.improvado.io/api
   baseURL: https://embedded.improvado.io
   tags:
-  - Ask
+  - Accounts
   properties:
   - type: OpenAPI
-    url: openapi/improvado-ask-api-openapi.yml
+    url: openapi/improvado-accounts-api-openapi.yml
+  - type: Documentation
+    url: https://improvado.io/llms.txt
+  - type: LLMsTxt
+    url: llms/improvado-site-llms.txt
+  - type: Authentication
+    url: authentication/improvado-authentication.yml
+  - type: RateLimits
+    url: rate-limits/improvado-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/improvado-error-codes.yml
+- aid: improvado:improvado-authentication-api
+  name: Improvado Authentication API
+  description: >-
+    Authentication and authorization endpoints for the Improvado Embedded API.
+
+
+    Authentication supports Basic Auth (username:password) for initial token creation, then Bearer tokens
+    for workspace-scoped operations.
+  humanURL: https://developers.improvado.io/api
+  baseURL: https://embedded.improvado.io
+  tags:
+  - Authentication
+  properties:
+  - type: OpenAPI
+    url: openapi/improvado-authentication-api-openapi.yml
+  - type: Documentation
+    url: https://improvado.io/llms.txt
+  - type: LLMsTxt
+    url: llms/improvado-site-llms.txt
+  - type: Authentication
+    url: authentication/improvado-authentication.yml
+  - type: RateLimits
+    url: rate-limits/improvado-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/improvado-error-codes.yml
+- aid: improvado:improvado-automated-recipes-api
+  name: Improvado Automated Recipes API
+  description: >-
+    Deploy and operate automated recipes through the v3.1 API.
+
+
+    An automated recipe turns a template into a SQL view in your workspace destination,
+
+    built from the extractions the template needs.
+
+
+    **Deploying a recipe takes four calls, in this order:**
+
+
+    1. `GET /api/v3.1/automated-recipe-templates/` - pick a template.
+
+    2. `POST /api/v3.1/automated-recipes/` - create the recipe. It is created empty.
+
+    3. `PUT /api/v3.1/automated-recipes/{recipe_id}/` - supply data sources, connections
+       and accounts. **This step is mandatory.**
+    4. `POST /api/v3.1/automated-recipes/{recipe_id}/build/` - start the build, then poll
+       `GET /api/v3.1/automated-recipes/{recipe_id}/` until `state` is `ready_to_work`
+       or `failed`.
+
+    Every path ends with a slash; a `301` means the slash is missing from your URL.
+
+    With a bearer token the workspace is the one the token was issued for; with cookie
+
+    authentication, send the workspace id in the `X-IM-WORKSPACE-ID` header.
+
+    All errors use one envelope - see [Errors](/errors).
+
+
+    See the [Deploying recipes](/recipes) guide for the full flow.
+  humanURL: https://developers.improvado.io/api
+  baseURL: https://embedded.improvado.io
+  tags:
+  - Automated Recipes
+  properties:
+  - type: OpenAPI
+    url: openapi/improvado-automated-recipes-api-openapi.yml
+  - type: Documentation
+    url: https://improvado.io/llms.txt
+  - type: LLMsTxt
+    url: llms/improvado-site-llms.txt
+  - type: Authentication
+    url: authentication/improvado-authentication.yml
+  - type: RateLimits
+    url: rate-limits/improvado-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/improvado-error-codes.yml
+- aid: improvado:improvado-data-source-connections-api
+  name: Improvado Data source connections API
+  description: >-
+    Manage connections to data sources for authentication and data access.
+
+
+    Connections handle authentication with data sources and maintain the credentials needed for data extraction.
+
+    Connections are typically created through the iframe UI, where users can:
+
+    - Provide username/password credentials
+
+    - Complete OAuth flows
+
+    - Configure additional connection parameters
+
+
+    Connection lifecycle:
+
+    1. Create connection via iframe (provides OAuth or credential input)
+
+    2. Validate connection status
+
+    3. Use connection to create extracts
+
+    4. Monitor connection health and refresh tokens as needed
+  humanURL: https://developers.improvado.io/api
+  baseURL: https://embedded.improvado.io
+  tags:
+  - Data source connections
+  properties:
+  - type: OpenAPI
+    url: openapi/improvado-data-source-connections-api-openapi.yml
+  - type: Documentation
+    url: https://improvado.io/llms.txt
+  - type: LLMsTxt
+    url: llms/improvado-site-llms.txt
+  - type: Authentication
+    url: authentication/improvado-authentication.yml
+  - type: RateLimits
+    url: rate-limits/improvado-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/improvado-error-codes.yml
+- aid: improvado:improvado-data-sources-api
+  name: Improvado Data sources API
+  description: >-
+    Browse and configure available data sources for extraction.
+
+
+    Data sources represent the marketing platforms, advertising networks, analytics tools, and other systems
+
+    from which Improvado can extract data (e.g., Google Ads, Facebook Ads, Salesforce).
+  humanURL: https://developers.improvado.io/api
+  baseURL: https://embedded.improvado.io
+  tags:
+  - Data sources
+  properties:
+  - type: OpenAPI
+    url: openapi/improvado-data-sources-api-openapi.yml
+  - type: Documentation
+    url: https://improvado.io/llms.txt
+  - type: LLMsTxt
+    url: llms/improvado-site-llms.txt
+  - type: Authentication
+    url: authentication/improvado-authentication.yml
+  - type: RateLimits
+    url: rate-limits/improvado-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/improvado-error-codes.yml
+- aid: improvado:improvado-data-tables-api
+  name: Improvado Data tables API
+  description: >-
+    Manage data tables where extracted data is stored and organized.
+
+
+    Data tables serve as centralized storage for extracted data. All extractions created from the same
+    extract template
+
+    are stored in the same data table, providing a unified view of your data. Data tables are also used
+    as sources
+
+    when configuring loads to destinations.
+  humanURL: https://developers.improvado.io/api
+  baseURL: https://embedded.improvado.io
+  tags:
+  - Data tables
+  properties:
+  - type: OpenAPI
+    url: openapi/improvado-data-tables-api-openapi.yml
+  - type: Documentation
+    url: https://improvado.io/llms.txt
+  - type: LLMsTxt
+    url: llms/improvado-site-llms.txt
+  - type: Authentication
+    url: authentication/improvado-authentication.yml
+  - type: RateLimits
+    url: rate-limits/improvado-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/improvado-error-codes.yml
+- aid: improvado:improvado-destination-connections-api
+  name: Improvado Destination connections API
+  description: >-
+    Configure and manage connections to destinations for data loading.
+
+
+    Destination connections define how and where data should be loaded within a destination system.
+
+    They include:
+
+    - Authentication credentials for the destination
+
+    - Target configuration (database, schema, table naming patterns)
+
+    - Load behavior settings (append, replace, upsert)
+
+    - Path and formatting rules
+
+
+    Destination connections are created and modified through the iframe UI to securely handle credentials.
+  humanURL: https://developers.improvado.io/api
+  baseURL: https://embedded.improvado.io
+  tags:
+  - Destination connections
+  properties:
+  - type: OpenAPI
+    url: openapi/improvado-destination-connections-api-openapi.yml
+  - type: Documentation
+    url: https://improvado.io/llms.txt
+  - type: LLMsTxt
+    url: llms/improvado-site-llms.txt
+  - type: Authentication
+    url: authentication/improvado-authentication.yml
+  - type: RateLimits
+    url: rate-limits/improvado-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/improvado-error-codes.yml
+- aid: improvado:improvado-destinations-api
+  name: Improvado Destinations API
+  description: >-
+    Manage available destination options where Improvado can load your data.
+
+
+    Destinations represent the target systems where extracted and transformed data is loaded, including:
+
+    - Data warehouses (Snowflake, BigQuery, Redshift)
+
+    - Databases (PostgreSQL, MySQL)
+
+    - File storage (S3, Google Cloud Storage)
+
+    - Business intelligence tools
+  humanURL: https://developers.improvado.io/api
+  baseURL: https://embedded.improvado.io
+  tags:
+  - Destinations
+  properties:
+  - type: OpenAPI
+    url: openapi/improvado-destinations-api-openapi.yml
+  - type: Documentation
+    url: https://improvado.io/llms.txt
+  - type: LLMsTxt
+    url: llms/improvado-site-llms.txt
+  - type: Authentication
+    url: authentication/improvado-authentication.yml
+  - type: RateLimits
+    url: rate-limits/improvado-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/improvado-error-codes.yml
+- aid: improvado:improvado-extraction-templates-api
+  name: Improvado Extraction templates API
+  description: >-
+    Work with predefined templates that define what data to extract from a data source.
+
+
+    Extract templates are blueprints that specify:
+
+    - Available fields from a data source
+
+    - Default extraction settings and parameters
+
+    - Supported date ranges and filters
+
+
+    Global templates are created and maintained by Improvado. When you create an extract, you select a
+    template
+
+    and optionally customize its settings for your specific use case.
+  humanURL: https://developers.improvado.io/api
+  baseURL: https://embedded.improvado.io
+  tags:
+  - Extraction templates
+  properties:
+  - type: OpenAPI
+    url: openapi/improvado-extraction-templates-api-openapi.yml
+  - type: Documentation
+    url: https://improvado.io/llms.txt
+  - type: LLMsTxt
+    url: llms/improvado-site-llms.txt
+  - type: Authentication
+    url: authentication/improvado-authentication.yml
+  - type: RateLimits
+    url: rate-limits/improvado-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/improvado-error-codes.yml
+- aid: improvado:improvado-extracts-api
+  name: Improvado Extracts API
+  description: >-
+    Create and manage data extraction orders that pull data from connected sources.
+
+
+    An extract represents a configured instance of data extraction with specific settings:
+
+    - Which connection and account to extract from
+
+    - Which extract template to use
+
+    - Custom field selections and filters
+
+    - Schedule and date range configuration
+
+    - Where to store the extracted data (data table)
+
+
+    Extract workflow:
+
+    1. Create extract with desired configuration
+
+    2. Extraction runs automatically on schedule or on-demand
+
+    3. Data is stored in the associated data table
+
+    4. Monitor extraction status and history
+  humanURL: https://developers.improvado.io/api
+  baseURL: https://embedded.improvado.io
+  tags:
+  - Extracts
+  properties:
+  - type: OpenAPI
+    url: openapi/improvado-extracts-api-openapi.yml
+  - type: Documentation
+    url: https://improvado.io/llms.txt
+  - type: LLMsTxt
+    url: llms/improvado-site-llms.txt
+  - type: Authentication
+    url: authentication/improvado-authentication.yml
+  - type: RateLimits
+    url: rate-limits/improvado-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/improvado-error-codes.yml
+- aid: improvado:improvado-iframe-api
+  name: Improvado Iframe API
+  description: >-
+    Generate secure iframe URLs for embedded UI components.
+
+
+    iframe endpoints provide secure, embeddable UI components for:
+
+    - Creating and managing data source connections (OAuth flows, credential input)
+
+    - Configuring destination connections
+
+    - Managing connection settings and permissions
+
+
+    These IFrames handle sensitive operations like authentication in a secure, pre-built UI that you can
+
+    embed directly into your application.
+  humanURL: https://developers.improvado.io/api
+  baseURL: https://embedded.improvado.io
+  tags:
+  - iframe
+  properties:
+  - type: OpenAPI
+    url: openapi/improvado-iframe-api-openapi.yml
+  - type: Documentation
+    url: https://improvado.io/llms.txt
+  - type: LLMsTxt
+    url: llms/improvado-site-llms.txt
+  - type: Authentication
+    url: authentication/improvado-authentication.yml
+  - type: RateLimits
+    url: rate-limits/improvado-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/improvado-error-codes.yml
+- aid: improvado:improvado-loads-api
+  name: Improvado Loads API
+  description: >-
+    Configure and manage data loading from data tables to destinations.
+
+
+    Load orders define the rules and settings for how data moves from Improvado's data tables
+
+    to your destination systems. This includes:
+
+    - Source data table selection
+
+    - Destination connection and target location
+
+    - Load schedule and frequency
+
+    - Data transformation and mapping rules
+
+    - Load mode (full refresh, incremental, etc.)
+
+
+    Loads ensure your data is automatically synchronized from Improvado to your destination on the schedule
+    you define.
+  humanURL: https://developers.improvado.io/api
+  baseURL: https://embedded.improvado.io
+  tags:
+  - Loads
+  properties:
+  - type: OpenAPI
+    url: openapi/improvado-loads-api-openapi.yml
+  - type: Documentation
+    url: https://improvado.io/llms.txt
+  - type: LLMsTxt
+    url: llms/improvado-site-llms.txt
+  - type: Authentication
+    url: authentication/improvado-authentication.yml
+  - type: RateLimits
+    url: rate-limits/improvado-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/improvado-error-codes.yml
+- aid: improvado:improvado-recipes-api
+  name: Improvado Recipes API
+  description: >-
+    Work with pre-built recipes that automate common data pipeline workflows.
+
+
+    Recipes are templated workflows that combine multiple API operations into reusable patterns.
+
+    They simplify common tasks like:
+
+    - Setting up end-to-end data pipelines (source → extract → load → destination)
+
+    - Configuring multiple related extracts at once
+
+    - Applying best-practice configurations
+
+
+    Recipes accelerate implementation by providing proven patterns for common use cases.
+
+
+    **Automated recipes have moved to v3.1.** They are documented under
+
+    [Automated Recipes](/api/automated-recipes), which is where new integrations should start.
+
+    The `/api/v3/automated-recipe-templates/` and `/api/v3/automated-recipes/` operations in
+
+    this tag are deprecated. They keep working until they are switched off, and we will
+
+    announce the date in advance. See [Moving recipes to v3.1](/recipes-migration) for what
+
+    changes between the two versions, and [Deploying recipes](/recipes) for the current flow.
+
+
+    **Two operations in this tag are not automated recipes and are not deprecated:**
+
+    `List agency recipes` (`GET /api/v3/recipes/`) and `Enable recipe in a workspace`
+
+    (`POST /api/v3/workspaces/{id}/recipes`). They use Basic authentication, work with the
+
+    recipes available to your agency rather than with automated recipes, and have no v3.1
+
+    replacement.
+  humanURL: https://developers.improvado.io/api
+  baseURL: https://embedded.improvado.io
+  tags:
+  - Recipes
+  properties:
+  - type: OpenAPI
+    url: openapi/improvado-recipes-api-openapi.yml
+  - type: Documentation
+    url: https://improvado.io/llms.txt
+  - type: LLMsTxt
+    url: llms/improvado-site-llms.txt
+  - type: Authentication
+    url: authentication/improvado-authentication.yml
+  - type: RateLimits
+    url: rate-limits/improvado-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/improvado-error-codes.yml
+- aid: improvado:improvado-roles-api
+  name: Improvado Roles API
+  description: >-
+    Manage custom workspace roles and inspect the available permission catalog.
+
+
+    Each agency ships with a fixed set of system roles (Workspace Admin, Editor, Viewer, Data Manager,
+
+    Data Load Manager, Data Analyst). On top of these you can define **custom roles** scoped to the
+
+    agency and assign them to users in any workspace.
+
+
+    Capabilities:
+
+    - List system + custom roles (each role carries its assigned `user_count`).
+
+    - Fetch the curated permission catalog: a stable, ordered list of product layers with
+      permissions, including human-readable `title` and `description` for each entry.
+    - Create, rename, edit, and delete custom roles. System roles are read-only.
+
+    - List users currently assigned to a role for impact preview.
+
+
+    Delete semantics: deleting a custom role atomically reassigns every user holding it to the
+
+    system **Viewer** role; the response returns `reassigned_users_count`.
+
+
+    All Roles endpoints require an agency-chief Basic Auth credential and the `can_use_embedded_api`
+
+    flag enabled for the agency.
+  humanURL: https://developers.improvado.io/api
+  baseURL: https://embedded.improvado.io
+  tags:
+  - Roles
+  properties:
+  - type: OpenAPI
+    url: openapi/improvado-roles-api-openapi.yml
+  - type: Documentation
+    url: https://improvado.io/llms.txt
+  - type: LLMsTxt
+    url: llms/improvado-site-llms.txt
+  - type: Authentication
+    url: authentication/improvado-authentication.yml
+  - type: RateLimits
+    url: rate-limits/improvado-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/improvado-error-codes.yml
+- aid: improvado:improvado-webhooks-api
+  name: Improvado Webhooks API
+  description: >-
+    Manage webhook endpoints that receive event notifications from Improvado.
+
+
+    Webhooks let your application react to platform events (extraction completion, load completion, etc.)
+
+    in near real time, without polling. Each endpoint is workspace-scoped and subscribes to one or more
+
+    event types.
+
+
+    Lifecycle:
+
+    1. **Register** an endpoint with the URL of your receiver and the event types you care about.
+       Improvado returns an `id` and a `secret`, and the endpoint is created in `unverified` status.
+    2. **Verify** ownership by calling the verify action. Improvado sends a GET request to your URL with
+       `X-Improvado-Verify-Token` and `X-Improvado-Challenge` headers. Your receiver must respond with
+    HTTP 200
+       and the challenge value as the response body. After successful verification the endpoint moves
+    to `active`.
+    3. **Receive events.** Improvado POSTs JSON payloads `{id, type, timestamp, data}` to your URL.
+       Each request is signed with HMAC-SHA256 in the `X-Improvado-Signature` header (using the endpoint's
+       secret) and includes `X-Improvado-Idempotency-Key` for safe retry handling.
+    4. **Rotate the secret** at any time. Rotation invalidates the previous secret immediately and resets
+    the
+       endpoint to `unverified` until you re-verify.
+
+    Failed deliveries are retried up to four times with backoff `[0s, 2s, 5s, 10s]`. Receivers should
+    aim to
+
+    respond within a few seconds and return 2xx for successful processing.
+  humanURL: https://developers.improvado.io/api
+  baseURL: https://embedded.improvado.io
+  tags:
+  - Webhooks
+  properties:
+  - type: OpenAPI
+    url: openapi/improvado-webhooks-api-openapi.yml
+  - type: Documentation
+    url: https://improvado.io/llms.txt
+  - type: LLMsTxt
+    url: llms/improvado-site-llms.txt
+  - type: Authentication
+    url: authentication/improvado-authentication.yml
+  - type: RateLimits
+    url: rate-limits/improvado-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/improvado-error-codes.yml
+- aid: improvado:improvado-workspaces-api
+  name: Improvado Workspaces API
+  description: >-
+    Manage workspaces that provide isolated environments for organizing resources.
+
+
+    Workspaces are fundamental to multi-tenancy in Improvado's Embedded API. Each workspace provides complete
+
+    isolation of resources including connections, extracts, data tables, and loads.
+
+
+    Use workspaces to:
+
+    - Separate resources for different customers or projects
+
+    - Maintain data isolation and security boundaries
+
+    - Control access through workspace-scoped tokens
+
+    - Organize resources by environment (dev, staging, production)
+
+
+    **Important**: Access tokens are scoped to a specific workspace. A token for one workspace cannot
+    access
+
+    resources in another workspace, ensuring strict isolation between tenants.
+  humanURL: https://developers.improvado.io/api
+  baseURL: https://embedded.improvado.io
+  tags:
+  - Workspaces
+  properties:
+  - type: OpenAPI
+    url: openapi/improvado-workspaces-api-openapi.yml
   - type: Documentation
     url: https://improvado.io/llms.txt
   - type: LLMsTxt

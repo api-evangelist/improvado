@@ -1,0 +1,634 @@
+openapi: 3.2.0
+info:
+  title: Improvado Embedded API v3 Roles API
+  version: 3.0.0
+  description: 'Improvado Embedded API V3 provides programmatic access to data extraction, transformation, and loading capabilities.
+
+
+    ## Authentication
+
+
+    This API supports multiple authentication methods depending on the endpoint:
+
+
+    ### Basic Authentication
+
+    Used for workspace-agnostic operations such as:
+
+    - Creating access tokens (`POST /api/v3/token`)
+
+    - Listing workspaces (`GET /api/v3/workspaces`)
+
+    - Managing workspaces (`POST /api/v3/workspaces`, `GET /api/v3/workspaces/{id}`, `PUT /api/v3/workspaces/{id}`)
+
+    - Getting iframe URLs (`POST /api/v3/get_iframe_url`)
+
+    - Listing available recipes (`GET /api/v3/recipes/`)
+
+    etc.
+
+
+    **Format**: `Authorization: Basic `
+
+
+    ### Bearer Token Authentication
+
+    Used for workspace-scoped operations after obtaining a token from `/api/v3/token`. The token is scoped to a specific workspace.
+
+
+    **Format**: `Authorization: Bearer `
+
+
+    ### Cookie Authentication
+
+    Alternative to Bearer token for browser-based integrations. When using cookie authentication, you must include the workspace ID in the request header.
+
+
+    **Cookie**: `dts_session_id=`
+
+
+    **Required Header**: `X-IM-WORKSPACE-ID: `
+
+
+    ## Workspace Scoping
+
+
+    Most API operations are workspace-scoped. After authenticating with Basic Auth, obtain a workspace-specific token using `POST /api/v3/token` with the desired `workspace_id`. This token provides access only to resources within that workspace, ensuring isolation between different customers or projects.
+
+
+    ## Errors
+
+
+    The automated recipe operations under `/api/v3.1/automated-recipe*` and
+
+    `GET /api/v3.1/connections/{connection_id}/accounts/` return errors as
+
+    `{"code": "...", "message": "...", "details": {...}}`. Branch on `code`, never on the
+
+    message text. See Errors for the catalogue of codes and the shape of `details`.
+
+
+    All other operations return errors as `{"detail": "error description"}`.'
+servers:
+- url: https://embedded.improvado.io
+tags:
+- name: Roles
+  x-zudoku-collapsed: true
+  description: 'Manage custom workspace roles and inspect the available permission catalog.
+
+
+    Each agency ships with a fixed set of system roles (Workspace Admin, Editor, Viewer, Data Manager,
+
+    Data Load Manager, Data Analyst). On top of these you can define **custom roles** scoped to the
+
+    agency and assign them to users in any workspace.
+
+
+    Capabilities:
+
+    - List system + custom roles (each role carries its assigned `user_count`).
+
+    - Fetch the curated permission catalog: a stable, ordered list of product layers with
+
+    permissions, including human-readable `title` and `description` for each entry.
+
+    - Create, rename, edit, and delete custom roles. System roles are read-only.
+
+    - List users currently assigned to a role for impact preview.
+
+
+    Delete semantics: deleting a custom role atomically reassigns every user holding it to the
+
+    system **Viewer** role; the response returns `reassigned_users_count`.
+
+
+    All Roles endpoints require an agency-chief Basic Auth credential and the `can_use_embedded_api`
+
+    flag enabled for the agency.'
+paths:
+  /api/v3/roles/:
+    get:
+      operationId: api_v3_roles_list
+      summary: List roles
+      description: 'Returns every role visible to the agency: non-internal system roles
+
+        (Workspace Admin, Editor, Viewer, etc.) plus all agency-scoped custom roles.
+
+        Each entry carries `user_count` — the number of users currently assigned to that role.'
+      tags:
+      - Roles
+      responses:
+        '200':
+          description: List of roles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleListResponse'
+              examples:
+                roles_list:
+                  value:
+                    roles:
+                    - id: 12
+                      title: Workspace Admin
+                      description: Full access across all product layers, including admin actions.
+                      is_system: true
+                      is_internal: false
+                      user_count: 4
+                      layers:
+                        extract:
+                        - view
+                        - create
+                        - update
+                        - delete
+                        admin:
+                        - view
+                        - create
+                        - update
+                        - delete
+                        - manage_roles
+                        - manage_users
+                    - id: 87
+                      title: Marketing Analyst
+                      description: Builds marketing reports and dashboards.
+                      is_system: false
+                      is_internal: false
+                      user_count: 5
+                      layers:
+                        dashboards:
+                        - view
+                        - create
+                        - edit
+                        extract:
+                        - view
+        '401':
+          description: Authentication credentials were not provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Agency does not have embedded API enabled, or caller is not an agency chief.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - basicAuth: []
+    post:
+      operationId: api_v3_roles_create
+      summary: Create a custom role
+      description: 'Creates a new agency-scoped custom role. The role''s title must be unique within the agency
+
+        and every `(layer, permission)` pair must come from the catalog (`GET /api/v3/roles/permissions`).'
+      tags:
+      - Roles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleWriteRequest'
+            examples:
+              create_role:
+                value:
+                  title: Marketing Analyst
+                  description: Builds marketing reports and dashboards.
+                  layers:
+                    dashboards:
+                    - view
+                    - create
+                    - edit
+                    extract:
+                    - view
+      responses:
+        '201':
+          description: Role created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateRoleResponse'
+              examples:
+                created:
+                  value:
+                    id: 87
+        '400':
+          description: Invalid payload (empty title, unknown layer/permission, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: A role with the same title already exists in this agency.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - basicAuth: []
+  /api/v3/roles/permissions:
+    get:
+      operationId: api_v3_roles_permissions_catalog
+      summary: Permissions catalog
+      description: 'Curated catalog of product layers and the permissions that can be granted on each.
+
+        Stable display order; `title`/`description` are human-readable and safe to render directly.'
+      tags:
+      - Roles
+      responses:
+        '200':
+          description: Catalog of layers and permissions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionsCatalogResponse'
+              examples:
+                catalog:
+                  value:
+                    layers:
+                    - code: extract
+                      title: Extract
+                      description: Extracting data from connected sources.
+                      permissions:
+                      - code: view
+                        title: View Extract
+                        description: See extract resources without modifying them.
+                      - code: create
+                        title: Create in Extract
+                        description: Create new extract resources.
+                    - code: admin
+                      title: Admin
+                      description: 'Workspace administration: users, roles, billing visibility.'
+                      permissions:
+                      - code: manage_roles
+                        title: Manage roles
+                        description: Create, edit, and delete custom roles for the workspace.
+        '401':
+          description: Authentication credentials were not provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - basicAuth: []
+  /api/v3/roles/{role_id}:
+    get:
+      operationId: api_v3_roles_retrieve
+      summary: Get a role
+      description: 'Returns one role. Visible to the agency only if it''s a non-internal system role
+
+        or an agency-scoped custom role belonging to the calling agency.'
+      tags:
+      - Roles
+      parameters:
+      - in: path
+        name: role_id
+        required: true
+        description: Role ID
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Role detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '404':
+          description: Role not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - basicAuth: []
+    patch:
+      operationId: api_v3_roles_partial_update
+      summary: Update a custom role
+      description: 'Update an agency-scoped custom role''s title, description, and permission set.
+
+        System roles are read-only and cannot be modified.'
+      tags:
+      - Roles
+      parameters:
+      - in: path
+        name: role_id
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleWriteRequest'
+      responses:
+        '200':
+          description: Updated role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '400':
+          description: Invalid payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: System roles cannot be modified.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Role not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Another role in this agency already uses this title.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - basicAuth: []
+    delete:
+      operationId: api_v3_roles_destroy
+      summary: Delete a custom role
+      description: 'Delete an agency-scoped custom role. **Users currently assigned to it are atomically
+
+        reassigned to the system Viewer role**; the response returns how many were moved.
+
+        System roles cannot be deleted.'
+      tags:
+      - Roles
+      parameters:
+      - in: path
+        name: role_id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Role deleted; affected users reassigned to Viewer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteRoleResponse'
+              examples:
+                deleted:
+                  value:
+                    reassigned_users_count: 5
+        '403':
+          description: System roles cannot be deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Role not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - basicAuth: []
+  /api/v3/roles/{role_id}/users:
+    get:
+      operationId: api_v3_roles_users_list
+      summary: List users assigned to a role
+      description: 'Returns the users currently holding the role, with their workspace assignment.
+
+        Useful for impact preview before editing or deleting the role.'
+      tags:
+      - Roles
+      parameters:
+      - in: path
+        name: role_id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Users assigned to the role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleUsersResponse'
+              examples:
+                users:
+                  value:
+                    users:
+                    - user_id: 42
+                      name: Anna Petrova
+                      email: anna.petrova@example.com
+                      workspace_id: 1
+                      workspace_title: Marketing
+                    - user_id: 51
+                      name: Ben Carter
+                      email: ben.carter@example.com
+                      workspace_id: 2
+                      workspace_title: Sales Ops
+        '404':
+          description: Role not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+      - basicAuth: []
+components:
+  schemas:
+    DeleteRoleResponse:
+      type: object
+      properties:
+        reassigned_users_count:
+          type: integer
+          description: Number of users that were reassigned to the Viewer system role as part of the delete.
+      required:
+      - reassigned_users_count
+    CatalogPermission:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Permission code (stable identifier, e.g. `view`, `create`, `manage_roles`).
+        title:
+          type: string
+          description: Human-readable title.
+        description:
+          type: string
+          description: Longer description suitable for tooltips.
+      required:
+      - code
+      - title
+      - description
+    RoleListResponse:
+      type: object
+      properties:
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+      required:
+      - roles
+    PermissionsCatalogResponse:
+      type: object
+      properties:
+        layers:
+          type: array
+          description: Ordered list of product layers with their valid permissions.
+          items:
+            $ref: '#/components/schemas/CatalogLayer'
+      required:
+      - layers
+    ErrorResponse:
+      type: object
+      description: Error response object
+      properties:
+        detail:
+          type: string
+          description: Error message
+      examples:
+      - no_auth:
+          value:
+            detail: You do not have permission to perform this action.
+      - invalid_request:
+          value:
+            detail: Invalid request
+      - not_uniq_name:
+          value:
+            detail: Workspace with this title already exists
+    RoleWriteRequest:
+      type: object
+      description: Payload for creating or updating a custom role.
+      properties:
+        title:
+          type: string
+          description: Role title. Must be non-empty and unique within the agency.
+        description:
+          type: string
+          description: Optional description.
+        layers:
+          type: object
+          description: Permissions grouped by product layer. Use codes from `GET /api/v3/roles/permissions`.
+          additionalProperties:
+            type: array
+            items:
+              type: string
+      required:
+      - title
+      - layers
+    CreateRoleResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID of the newly created role.
+      required:
+      - id
+    RoleUsersResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleUser'
+      required:
+      - users
+    CatalogLayer:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Product layer code (stable identifier, e.g. `extract`, `admin`).
+        title:
+          type: string
+          description: Human-readable layer name.
+        description:
+          type: string
+          description: Layer description suitable for headers/tooltips.
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogPermission'
+      required:
+      - code
+      - title
+      - description
+      - permissions
+    Role:
+      type: object
+      description: Workspace role (system or agency-custom).
+      properties:
+        id:
+          type: integer
+          description: Role ID
+        title:
+          type: string
+          description: Role title (unique within the agency)
+        description:
+          type: string
+          description: Optional human-readable description
+        is_system:
+          type: boolean
+          description: True for built-in Improvado-managed roles. Read-only — cannot be edited or deleted.
+        is_internal:
+          type: boolean
+          description: True for internal-only roles (impersonation, guest viewers). These are never listed in the API.
+        layers:
+          type: object
+          description: Permissions grouped by product layer. Layer codes match `code` in the permissions catalog.
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        user_count:
+          type: integer
+          description: Number of users currently assigned to this role across the agency.
+      required:
+      - id
+      - title
+      - description
+      - is_system
+      - is_internal
+      - layers
+      - user_count
+    RoleUser:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        name:
+          type: string
+          description: Display name. Falls back to email if first/last name are blank.
+        email:
+          type: string
+        workspace_id:
+          type: integer
+        workspace_title:
+          type: string
+      required:
+      - user_id
+      - name
+      - email
+      - workspace_id
+      - workspace_title
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    tokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Bearer
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: dts_session_id
+      description: Cookie authentication. When using this method, the HTTP_X_IM_WORKSPACE_ID header must be included with the workspace_id (integer) value.

@@ -1,0 +1,524 @@
+openapi: 3.2.0
+info:
+  title: Improvado Embedded API v3 Data tables API
+  version: 3.0.0
+  description: 'Improvado Embedded API V3 provides programmatic access to data extraction, transformation, and loading capabilities.
+
+
+    ## Authentication
+
+
+    This API supports multiple authentication methods depending on the endpoint:
+
+
+    ### Basic Authentication
+
+    Used for workspace-agnostic operations such as:
+
+    - Creating access tokens (`POST /api/v3/token`)
+
+    - Listing workspaces (`GET /api/v3/workspaces`)
+
+    - Managing workspaces (`POST /api/v3/workspaces`, `GET /api/v3/workspaces/{id}`, `PUT /api/v3/workspaces/{id}`)
+
+    - Getting iframe URLs (`POST /api/v3/get_iframe_url`)
+
+    - Listing available recipes (`GET /api/v3/recipes/`)
+
+    etc.
+
+
+    **Format**: `Authorization: Basic `
+
+
+    ### Bearer Token Authentication
+
+    Used for workspace-scoped operations after obtaining a token from `/api/v3/token`. The token is scoped to a specific workspace.
+
+
+    **Format**: `Authorization: Bearer `
+
+
+    ### Cookie Authentication
+
+    Alternative to Bearer token for browser-based integrations. When using cookie authentication, you must include the workspace ID in the request header.
+
+
+    **Cookie**: `dts_session_id=`
+
+
+    **Required Header**: `X-IM-WORKSPACE-ID: `
+
+
+    ## Workspace Scoping
+
+
+    Most API operations are workspace-scoped. After authenticating with Basic Auth, obtain a workspace-specific token using `POST /api/v3/token` with the desired `workspace_id`. This token provides access only to resources within that workspace, ensuring isolation between different customers or projects.
+
+
+    ## Errors
+
+
+    The automated recipe operations under `/api/v3.1/automated-recipe*` and
+
+    `GET /api/v3.1/connections/{connection_id}/accounts/` return errors as
+
+    `{"code": "...", "message": "...", "details": {...}}`. Branch on `code`, never on the
+
+    message text. See Errors for the catalogue of codes and the shape of `details`.
+
+
+    All other operations return errors as `{"detail": "error description"}`.'
+servers:
+- url: https://embedded.improvado.io
+tags:
+- name: Data tables
+  x-zudoku-collapsed: true
+  description: 'Manage data tables where extracted data is stored and organized.
+
+
+    Data tables serve as centralized storage for extracted data. All extractions created from the same extract template
+
+    are stored in the same data table, providing a unified view of your data. Data tables are also used as sources
+
+    when configuring loads to destinations.'
+paths:
+  /api/v3/data-tables:
+    get:
+      parameters: []
+      operationId: api_v3_data_tables_list
+      summary: List data tables
+      tags:
+      - Data tables
+      responses:
+        '200':
+          description: Get a list of data tables
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaginatedDataTableList'
+              examples:
+                data_tables_list:
+                  value:
+                    count: 2
+                    next: null
+                    previous: null
+                    results:
+                    - id: 1
+                      title: Table 1
+                      datasource_name: google_sheets
+                    - id: 2
+                      title: Table 2
+                      datasource_name: google_ads
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/data-tables/{data_table_id}:
+    get:
+      operationId: api_v3_data_table_detail
+      summary: Get a data table
+      description: Get detailed info about data table
+      tags:
+      - Data tables
+      parameters:
+      - in: path
+        name: data_table_id
+        schema:
+          type: integer
+        required: true
+        description: Data Table ID
+        examples:
+          data_table_1:
+            value:
+              data_table_id: 1
+          wrong_data_table_id:
+            value:
+              data_table_id: 404
+      responses:
+        '200':
+          description: Get a Data Table
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataTableDetail'
+              examples:
+                data_table_1:
+                  value:
+                    title: Table 1
+                    freshness: 2021-01-01 00:00:00+00:00
+                    datasource_name: google_ads
+                    report_type: report
+                    data_class: daily
+                    workspace: 1
+                    sql_name: report_123_google_ads
+                    auto_extract_new_accounts: true
+                    fields:
+                    - name: field_1
+                      user_kind: dimension
+                      user_type: string
+                      title: Field 1
+                      sql_name: field_1
+                      format: string
+                      is_dynamic: false
+                      selected: true
+                      can_edit: false
+                    - name: field_2
+                      user_kind: dimension
+                      user_type: string
+                      title: Field 2
+                      sql_name: field_2
+                      format: string
+                      is_dynamic: false
+                      selected: true
+                      can_edit: false
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Data Table not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    put:
+      operationId: api_v3_data_table_update
+      summary: Update a data table
+      description: 'Updates which fields (columns) of the data table are selected for delivery. `selected_fields` must contain the full list of field `name` values (as returned by the detail endpoint''s `fields[].name`) that should be selected — any field not listed becomes deselected. Field selection is set at the data table level and affects all loads delivering this data table.
+
+        Unknown field names are ignored. Dimension fields cannot be deselected — omitting a dimension field from `selected_fields` returns `400`. Fields the detail endpoint returns with `can_edit: false` are not meant to be toggled and should always be included in `selected_fields`.'
+      tags:
+      - Data tables
+      parameters:
+      - in: path
+        name: data_table_id
+        schema:
+          type: integer
+        required: true
+        description: Data Table ID
+        examples:
+          data_table_update:
+            value:
+              data_table_id: 1
+          deselect_dimension:
+            value:
+              data_table_id: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - selected_fields
+              properties:
+                selected_fields:
+                  type: array
+                  items:
+                    type: string
+                  description: Full list of field `name` values that should be selected. Any field of the data table not listed becomes deselected.
+            examples:
+              data_table_update:
+                value:
+                  selected_fields:
+                  - field_1
+              deselect_dimension:
+                value:
+                  selected_fields:
+                  - field_2
+      responses:
+        '200':
+          description: Update a Data Table
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataTableDetail'
+              examples:
+                data_table_update:
+                  value:
+                    title: Table 1
+                    freshness: 2021-01-01 00:00:00+00:00
+                    datasource_name: google_ads
+                    report_type: report
+                    data_class: daily
+                    workspace: 1
+                    sql_name: report_123_google_ads
+                    auto_extract_new_accounts: true
+                    fields:
+                    - name: field_1
+                      user_kind: dimension
+                      user_type: string
+                      title: Field 1
+                      sql_name: field_1
+                      format: string
+                      is_dynamic: false
+                      selected: true
+                      can_edit: true
+                    - name: field_2
+                      user_kind: metric
+                      user_type: number
+                      title: Field 2
+                      sql_name: field_2
+                      format: integer
+                      is_dynamic: false
+                      selected: false
+                      can_edit: true
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                deselect_dimension:
+                  value:
+                    detail: Dimension field field_1 must be selected
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Data Table not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      description: Error response object
+      properties:
+        detail:
+          type: string
+          description: Error message
+      examples:
+      - no_auth:
+          value:
+            detail: You do not have permission to perform this action.
+      - invalid_request:
+          value:
+            detail: Invalid request
+      - not_uniq_name:
+          value:
+            detail: Workspace with this title already exists
+    DataTable:
+      type: object
+      description: Data Table object
+      properties:
+        id:
+          type: integer
+          description: Data Table ID
+        title:
+          type: string
+          description: Data Table title
+        datasource_name:
+          type: string
+          description: Data source name
+      examples:
+      - data_table:
+          value:
+            id: 1
+            title: Table 1
+            datasource_name: google_sheets
+    Field:
+      type: object
+      description: Field object
+      properties:
+        title:
+          type: string
+          description: Field title
+        name:
+          type: string
+          description: Field name
+        user_kind:
+          type: string
+          description: Field kind
+        user_type:
+          type: string
+          description: Field type
+        selected:
+          type: boolean
+          description: Is the field selected
+        can_edit:
+          type: boolean
+          description: Can the field be edited
+        sql_name:
+          type: string
+          description: Sql Name of a Field
+        format:
+          type: string
+          description: 'Hint on how the value is meant to be rendered — not a storage contract. Metrics fall back to `float` whenever a data source does not declare a format explicitly, so `float` does not imply the value is fractional, and no decimal precision is guaranteed: values are passed through exactly as the data source returns them, without rounding. New formats may be added over time, so treat an unrecognised value as an unformatted string rather than failing.
+
+            '
+          enum:
+          - string
+          - float
+          - integer
+          - iso_8601_date
+          - currency
+          - percent
+          - duration
+          - url
+          - image_url
+          examples:
+          - float
+        is_dynamic:
+          type: boolean
+          description: Is the field dynamic
+      examples:
+      - field:
+          value:
+            title: Field 1
+            name: field_1
+            user_kind: property
+            user_type: string
+            selected: true
+            can_edit: true
+            format: string
+            is_dynamic: false
+    PaginatedDataTableList:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Number of data tables
+        next:
+          type: string
+          description: URL to the next page
+        previous:
+          type: string
+          description: URL to the previous page
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataTable'
+      examples:
+      - data_tables_list:
+          value:
+            count: 2
+            next: null
+            previous: null
+            results:
+            - id: 1
+              title: Table 1
+              datasource_name: google_sheets
+            - id: 2
+              title: Table 2
+              datasource_name: google_ads
+    DataTableDetail:
+      type: object
+      description: Data Table Detail object
+      properties:
+        title:
+          type: string
+          description: Data Table title
+        freshness:
+          type: string
+          description: Data Table freshness date
+        datasource_name:
+          type: string
+          description: Data source name
+        report_type:
+          type: string
+          description: Report type
+        data_class:
+          type: string
+          description: Data class
+        workspace:
+          type: integer
+          description: Workspace ID
+        sql_name:
+          type: string
+          description: SQL name
+        auto_extract_new_accounts:
+          type: boolean
+          description: Auto extract new accounts
+        fields:
+          type: object
+          description: Fields object
+          properties:
+            name:
+              $ref: '#/components/schemas/Field'
+      examples:
+      - data_table_1:
+          value:
+            title: Table 1
+            freshness: 2021-01-01 00:00:00+00:00
+            data_source: google_ads
+            report_type: report
+            data_class: daily
+            workspace: 1
+            sql_name: report_123_google_ads
+            auto_extract_new_accounts: true
+            fields:
+              field_1:
+                kind: dimension
+                title: Field 1
+                sql_name: field_1
+                field_type: string
+                format: string
+                is_dynamic: false
+                is_selected: true
+              field_2:
+                kind: dimension
+                title: Field 2
+                sql_name: field_2
+                field_type: string
+                format: string
+                is_dynamic: false
+                is_selected: true
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    tokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Bearer
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: dts_session_id
+      description: Cookie authentication. When using this method, the HTTP_X_IM_WORKSPACE_ID header must be included with the workspace_id (integer) value.

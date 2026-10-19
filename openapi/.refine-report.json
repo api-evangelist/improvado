@@ -1,22 +1,33 @@
 {
   "provider": "improvado",
   "sources": [
-    "_original/improvado-agent-ask-openapi.json"
+    "_original/improvado-openapi.yml"
   ],
   "outputs": [
-    "improvado-ask-api-openapi.yml"
+    "improvado-accounts-api-openapi.yml",
+    "improvado-authentication-api-openapi.yml",
+    "improvado-automated-recipes-api-openapi.yml",
+    "improvado-data-source-connections-api-openapi.yml",
+    "improvado-data-sources-api-openapi.yml",
+    "improvado-data-tables-api-openapi.yml",
+    "improvado-destination-connections-api-openapi.yml",
+    "improvado-destinations-api-openapi.yml",
+    "improvado-extraction-templates-api-openapi.yml",
+    "improvado-extracts-api-openapi.yml",
+    "improvado-loads-api-openapi.yml",
+    "improvado-recipes-api-openapi.yml",
+    "improvado-roles-api-openapi.yml",
+    "improvado-webhooks-api-openapi.yml",
+    "improvado-workspaces-api-openapi.yml",
+    "improvado-iframe-api-openapi.yml"
   ],
   "archived": [],
   "errors": [],
   "warnings": [],
   "notes": [
     "sourced from openapi/_original/ (1 archived document(s)); previously refined output at the top level was skipped rather than re-split",
-    "improvado-agent-ask-openapi.json: upgraded openapi 3.1.0 -> OpenAPI 3.2.0",
-    "improvado-agent-ask-openapi.json: tagged paths POST /ask -> Ask",
-    "improvado-agent-ask-openapi.json: declared missing tag: Ask",
-    "apis.yml register: already-registered"
+    "improvado-openapi.yml: upgraded openapi 3.1.1 -> OpenAPI 3.2.0",
+    "apis.yml register: written (+16 apis, 18 total)"
   ],
-  "skipped": [
-    "improvado-ask-api-openapi.yml: previously refined output, superseded by openapi/_original/"
-  ]
+  "skipped": []
 }

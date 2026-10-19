@@ -1,0 +1,247 @@
+openapi: 3.2.0
+info:
+  title: Improvado Embedded API v3 Destinations API
+  version: 3.0.0
+  description: 'Improvado Embedded API V3 provides programmatic access to data extraction, transformation, and loading capabilities.
+
+
+    ## Authentication
+
+
+    This API supports multiple authentication methods depending on the endpoint:
+
+
+    ### Basic Authentication
+
+    Used for workspace-agnostic operations such as:
+
+    - Creating access tokens (`POST /api/v3/token`)
+
+    - Listing workspaces (`GET /api/v3/workspaces`)
+
+    - Managing workspaces (`POST /api/v3/workspaces`, `GET /api/v3/workspaces/{id}`, `PUT /api/v3/workspaces/{id}`)
+
+    - Getting iframe URLs (`POST /api/v3/get_iframe_url`)
+
+    - Listing available recipes (`GET /api/v3/recipes/`)
+
+    etc.
+
+
+    **Format**: `Authorization: Basic `
+
+
+    ### Bearer Token Authentication
+
+    Used for workspace-scoped operations after obtaining a token from `/api/v3/token`. The token is scoped to a specific workspace.
+
+
+    **Format**: `Authorization: Bearer `
+
+
+    ### Cookie Authentication
+
+    Alternative to Bearer token for browser-based integrations. When using cookie authentication, you must include the workspace ID in the request header.
+
+
+    **Cookie**: `dts_session_id=`
+
+
+    **Required Header**: `X-IM-WORKSPACE-ID: `
+
+
+    ## Workspace Scoping
+
+
+    Most API operations are workspace-scoped. After authenticating with Basic Auth, obtain a workspace-specific token using `POST /api/v3/token` with the desired `workspace_id`. This token provides access only to resources within that workspace, ensuring isolation between different customers or projects.
+
+
+    ## Errors
+
+
+    The automated recipe operations under `/api/v3.1/automated-recipe*` and
+
+    `GET /api/v3.1/connections/{connection_id}/accounts/` return errors as
+
+    `{"code": "...", "message": "...", "details": {...}}`. Branch on `code`, never on the
+
+    message text. See Errors for the catalogue of codes and the shape of `details`.
+
+
+    All other operations return errors as `{"detail": "error description"}`.'
+servers:
+- url: https://embedded.improvado.io
+tags:
+- name: Destinations
+  x-zudoku-collapsed: true
+  description: 'Manage available destination options where Improvado can load your data.
+
+
+    Destinations represent the target systems where extracted and transformed data is loaded, including:
+
+    - Data warehouses (Snowflake, BigQuery, Redshift)
+
+    - Databases (PostgreSQL, MySQL)
+
+    - File storage (S3, Google Cloud Storage)
+
+    - Business intelligence tools'
+paths:
+  /api/v3/destinations:
+    get:
+      parameters: []
+      operationId: api_v3_destinations_list
+      summary: List of destinations
+      description: List destinations with short info. Paginated response is ordered by the name field.
+      tags:
+      - Destinations
+      responses:
+        '200':
+          description: Get a list of Destinations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaginatedDestinationList'
+              examples:
+                destinations_list:
+                  value:
+                    count: 2
+                    next: null
+                    previous: null
+                    results:
+                    - name: gbq
+                      title: Google Big Query
+                      info: GBQ destination
+                      icons:
+                        res_300x200: https://example.com/icon_300x200.png
+                        res_40x40: https://example.com/icon_40x40.png
+                        res_20x20: https://example.com/icon_20x20.png
+                    - name: s3
+                      title: S3
+                      info: S3 destination
+                      icons:
+                        res_300x200: https://example.com/icon_300x200.png
+                        res_40x40: https://example.com/icon_40x40.png
+                        res_20x20: https://example.com/icon_20x20.png
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      description: Error response object
+      properties:
+        detail:
+          type: string
+          description: Error message
+      examples:
+      - no_auth:
+          value:
+            detail: You do not have permission to perform this action.
+      - invalid_request:
+          value:
+            detail: Invalid request
+      - not_uniq_name:
+          value:
+            detail: Workspace with this title already exists
+    Destination:
+      type: object
+      description: Destination object
+      properties:
+        name:
+          type: string
+          description: string identifier of destination
+        title:
+          type: string
+          description: Destination title
+        info:
+          type: string
+          description: Destination info
+        icons:
+          type: object
+          properties:
+            res_300x200:
+              type: string
+              description: URL to the 300x200 icon
+            res_40x40:
+              type: string
+              description: URL to the 40x40 icon
+            res_20x20:
+              type: string
+              description: URL to the 20x20 icon
+      examples:
+      - destination:
+          value:
+            name: google_sheets
+            title: Google Sheets
+            info: Google Sheets destination
+            icons:
+              res_300x200: https://example.com/icon_300x200.png
+              res_40x40: https://example.com/icon_40x40.png
+              res_20x20: https://example.com/icon_20x20.png
+    PaginatedDestinationList:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Number of destinations
+        next:
+          type: string
+          description: URL to the next page
+        previous:
+          type: string
+          description: URL to the previous page
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Destination'
+      examples:
+      - destinations_list:
+          value:
+            count: 2
+            next: null
+            previous: null
+            results:
+            - name: google_sheets
+              title: Google Sheets
+              info: Google Sheets destination
+              icons:
+                res_300x200: https://example.com/icon_300x200.png
+                res_40x40: https://example.com/icon_40x40.png
+                res_20x20: https://example.com/icon_20x20.png
+            - name: google_ads
+              title: Google Ads
+              info: Google Ads destination
+              icons:
+                res_300x200: https://example.com/icon_300x200.png
+                res_40x40: https://example.com/icon_40x40.png
+                res_20x20: https://example.com/icon_20x20.png
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    tokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Bearer
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: dts_session_id
+      description: Cookie authentication. When using this method, the HTTP_X_IM_WORKSPACE_ID header must be included with the workspace_id (integer) value.

@@ -1,0 +1,941 @@
+openapi: 3.2.0
+info:
+  title: Improvado Embedded API v3 Destination connections API
+  version: 3.0.0
+  description: 'Improvado Embedded API V3 provides programmatic access to data extraction, transformation, and loading capabilities.
+
+
+    ## Authentication
+
+
+    This API supports multiple authentication methods depending on the endpoint:
+
+
+    ### Basic Authentication
+
+    Used for workspace-agnostic operations such as:
+
+    - Creating access tokens (`POST /api/v3/token`)
+
+    - Listing workspaces (`GET /api/v3/workspaces`)
+
+    - Managing workspaces (`POST /api/v3/workspaces`, `GET /api/v3/workspaces/{id}`, `PUT /api/v3/workspaces/{id}`)
+
+    - Getting iframe URLs (`POST /api/v3/get_iframe_url`)
+
+    - Listing available recipes (`GET /api/v3/recipes/`)
+
+    etc.
+
+
+    **Format**: `Authorization: Basic `
+
+
+    ### Bearer Token Authentication
+
+    Used for workspace-scoped operations after obtaining a token from `/api/v3/token`. The token is scoped to a specific workspace.
+
+
+    **Format**: `Authorization: Bearer `
+
+
+    ### Cookie Authentication
+
+    Alternative to Bearer token for browser-based integrations. When using cookie authentication, you must include the workspace ID in the request header.
+
+
+    **Cookie**: `dts_session_id=`
+
+
+    **Required Header**: `X-IM-WORKSPACE-ID: `
+
+
+    ## Workspace Scoping
+
+
+    Most API operations are workspace-scoped. After authenticating with Basic Auth, obtain a workspace-specific token using `POST /api/v3/token` with the desired `workspace_id`. This token provides access only to resources within that workspace, ensuring isolation between different customers or projects.
+
+
+    ## Errors
+
+
+    The automated recipe operations under `/api/v3.1/automated-recipe*` and
+
+    `GET /api/v3.1/connections/{connection_id}/accounts/` return errors as
+
+    `{"code": "...", "message": "...", "details": {...}}`. Branch on `code`, never on the
+
+    message text. See Errors for the catalogue of codes and the shape of `details`.
+
+
+    All other operations return errors as `{"detail": "error description"}`.'
+servers:
+- url: https://embedded.improvado.io
+tags:
+- name: Destination connections
+  x-zudoku-collapsed: true
+  description: 'Configure and manage connections to destinations for data loading.
+
+
+    Destination connections define how and where data should be loaded within a destination system.
+
+    They include:
+
+    - Authentication credentials for the destination
+
+    - Target configuration (database, schema, table naming patterns)
+
+    - Load behavior settings (append, replace, upsert)
+
+    - Path and formatting rules
+
+
+    Destination connections are created and modified through the iframe UI to securely handle credentials.'
+paths:
+  /api/v3/destinations/{destination_name}/connections:
+    get:
+      operationId: api_v3_destination_connections_list
+      summary: List destination connections
+      tags:
+      - Destination connections
+      parameters:
+      - in: path
+        name: destination_name
+        schema:
+          type: string
+        required: true
+        description: Destination name
+        examples:
+          destination_connections_list:
+            value:
+              destination_name: google_sheets
+          wrong_destination_name:
+            value:
+              destination_name: wrong_name
+      responses:
+        '200':
+          description: List of destination connections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaginatedDestinationConnectionList'
+              examples:
+                connections_list:
+                  value:
+                    count: 2
+                    next: null
+                    previous: null
+                    results:
+                    - id: 1
+                      destination:
+                        name: google_sheets
+                        title: Google Sheets
+                        info: Google Sheets destination
+                        icons:
+                          res_300x200: https://example.com/icon_300x200.png
+                          res_40x40: https://example.com/icon_40x40.png
+                          res_20x20: https://example.com/icon_20x20.png
+                      title: Destination Connection 1
+                      updated_at: 2021-01-01 00:00:00+00:00
+                      status: active
+                      error_text: Error text
+                      is_editable: true
+                      create_load_for_new_tables: true
+                    - id: 2
+                      destination:
+                        name: google_sheets
+                        title: Google Sheets
+                        info: Google Sheets destination
+                        icons:
+                          res_300x200: https://example.com/icon_300x200.png
+                          res_40x40: https://example.com/icon_40x40.png
+                          res_20x20: https://example.com/icon_20x20.png
+                      title: Destination Connection 1
+                      updated_at: 2021-01-01 00:00:00+00:00
+                      status: active
+                      error_text: Error text
+                      is_editable: true
+                      create_load_for_new_tables: true
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_destination_name:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    post:
+      operationId: api_v3_destination_connection_create
+      summary: Create a connection
+      description: 'Create a destination connection of a given type.
+
+
+        The set of `connection_params` fields depends on the destination. For `s3`:
+
+
+        - `connection_option` — authentication method: `aws_credentials` (default), `bucket_policy`, or `role_chaining`
+
+        - `aws_access_key_id`, `aws_secret_access_key` — AWS credentials; required only for `aws_credentials` (secret fields)
+
+        - `assume_role_arn` — customer IAM role ARN; required only for `role_chaining`
+
+        - `improvado_assume_role_arn`, `improvado_assume_role_externalid` — managed by Improvado and returned read-only; use them to build the trust policy on the customer side for `role_chaining`
+
+        - `aws_default_region` — AWS region code, e.g. `eu-west-1`
+
+        - `bucket_name`, `folder`, `filename` — target location; `filename` supports templates like `{{ filename }}-{{ YYYY }}-{{ MM }}-{{ DD }}`
+
+        - `file_format` (`parquet` | `csv` | `csv_gzip` | `csv_gz` | `json` | `json_gzip` | `json_gz` | `avro`), `separator`, `partition_by` (`by_day` | `by_month`)
+
+        - `max_file_size_mb` — optional chunking limit (45–100000); requires `{{chunk_id}}` in `filename` and `file_format: parquet`
+
+        - `encryption` (`no_storage_encryption` | `sse_s3` | `sse_kms` | `sse_kms_with_customer_managed_key`), `encryption_key` — required secret field: the KMS key id when using `sse_kms_with_customer_managed_key`, the literal placeholder `stub` for every other encryption option
+
+        - `use_load_by_accounts` — split delivered files by account'
+      tags:
+      - Destination connections
+      parameters:
+      - in: path
+        name: destination_name
+        schema:
+          type: string
+        required: true
+        description: Destination name
+        examples:
+          destination_connection_create:
+            value:
+              destination_name: google_sheets
+          wrong_destination_name:
+            value:
+              destination_name: wrong_name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: Connection title
+                create_load_for_new_tables:
+                  type: boolean
+                  description: Create load for new tables
+                destination_name:
+                  type: string
+                  description: Destination name
+                connection_params:
+                  type: object
+                  description: Connection params
+            examples:
+              s3_aws_credentials:
+                summary: S3 with AWS credentials
+                value:
+                  title: Destination Connection 1
+                  create_load_for_new_tables: true
+                  destination_name: s3
+                  connection_params:
+                    connection_option: aws_credentials
+                    aws_access_key_id: test
+                    aws_secret_access_key: test
+                    aws_default_region: eu-west-1
+                    bucket_name: test-bucket
+                    folder: test-folder
+                    filename: '{{ filename }}-{{ YYYY }}-{{ MM }}-{{ DD }}'
+                    file_format: parquet
+                    separator: ','
+                    partition_by: by_day
+                    encryption: sse_s3
+                    encryption_key: stub
+                    use_load_by_accounts: false
+              s3_role_chaining:
+                summary: S3 with cross-account IAM role chaining
+                value:
+                  title: Destination Connection 2
+                  create_load_for_new_tables: true
+                  destination_name: s3
+                  connection_params:
+                    connection_option: role_chaining
+                    assume_role_arn: arn:aws:iam::123456789012:role/improvado-access
+                    aws_default_region: eu-west-1
+                    bucket_name: test-bucket
+                    folder: test-folder
+                    filename: '{{ filename }}-{{ YYYY }}-{{ MM }}-{{ DD }}'
+                    file_format: parquet
+                    separator: ','
+                    partition_by: by_day
+                    encryption: sse_s3
+                    encryption_key: stub
+                    use_load_by_accounts: false
+              wrong_destination_name:
+                value:
+                  title: Destination Connection 1
+                  create_load_for_new_tables: true
+                  destination_name: wrong_name
+                  connection_params: {}
+      responses:
+        '201':
+          description: Create a Connection
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_destination_name:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/destinations/{destination_name}/connections/{id}:
+    get:
+      operationId: api_v3_destination_connection_retrieve
+      summary: Get a connection
+      description: Get detailed info about destination connection
+      tags:
+      - Destination connections
+      parameters:
+      - in: path
+        name: destination_name
+        schema:
+          type: string
+        required: true
+        description: Destination name
+        examples:
+          destination_connection_retrieve:
+            value:
+              destination_name: google_sheets
+          wrong_destination_name:
+            value:
+              destination_name: wrong_name
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Destination Connection ID
+        examples:
+          destination_connection_retrieve:
+            value:
+              id: 1
+          wrong_destination_name:
+            value:
+              id: 1
+      responses:
+        '200':
+          description: Get a Connection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Connection'
+              examples:
+                destination_connection_retrieve:
+                  value:
+                    id: 1
+                    destination:
+                      name: google_sheets
+                      title: Google Sheets
+                      info: Google Sheets destination
+                      icons:
+                        res_300x200: https://example.com/icon_300x200.png
+                        res_40x40: https://example.com/icon_40x40.png
+                        res_20x20: https://example.com/icon_20x20.png
+                    title: Destination Connection 1
+                    updated_at: 2021-01-01 00:00:00+00:00
+                    status: active
+                    error_text: Error text
+                    is_editable: true
+                    create_load_for_new_tables: true
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_destination_name:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Connection not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    patch:
+      operationId: api_v3_destination_connection_update
+      summary: Update a connection
+      description: Allows to update create_load_for_new_tables value for destination connection
+      tags:
+      - Destination connections
+      parameters:
+      - in: path
+        name: destination_name
+        schema:
+          type: string
+        required: true
+        description: Destination name
+        examples:
+          destination_connection_update:
+            value:
+              destination_name: google_sheets
+          wrong_destination_name:
+            value:
+              destination_name: wrong_name
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Destination Connection ID
+        examples:
+          destination_connection_update:
+            value:
+              id: 1
+          wrong_destination_name:
+            value:
+              id: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                create_load_for_new_tables:
+                  type: boolean
+            examples:
+              destination_connection_update:
+                value:
+                  create_load_for_new_tables: true
+              wrong_destination_name:
+                value:
+                  create_load_for_new_tables: true
+      responses:
+        '200':
+          description: Update a Connection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DestinationConnection'
+              examples:
+                destination_connection_update:
+                  value:
+                    id: 1
+                    destination:
+                      name: google_sheets
+                      title: Google Sheets
+                      info: Google Sheets destination
+                      icons:
+                        res_300x200: https://example.com/icon_300x200.png
+                        res_40x40: https://example.com/icon_40x40.png
+                        res_20x20: https://example.com/icon_20x20.png
+                    title: Destination Connection 1
+                    updated_at: 2021-01-01 00:00:00+00:00
+                    status: active
+                    error_text: Error text
+                    is_editable: true
+                    create_load_for_new_tables: true
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_destination_name:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Connection not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    put:
+      operationId: api_v3_destination_connection_update_params
+      summary: Update connection parameters
+      description: 'Update the title and/or connection parameters of an existing destination connection.
+
+
+        `connection_params` is merged at field level: only the fields present in the payload are
+
+        updated, omitted fields keep their current values. To change a single setting, send just
+
+        that field — e.g. `{"connection_params": {"partition_by": "by_month"}}`.
+
+
+        Notes:
+
+
+        - Unknown field names are rejected with `400`.
+
+        - Secret fields cannot be updated one at a time — if any secret field is present in the
+
+        payload, all required secret fields must be sent together. For `s3` that means
+
+        `aws_access_key_id`, `aws_secret_access_key` and `encryption_key` always travel as a
+
+        trio (keep `encryption_key: "stub"` unless you use a customer-managed KMS key).
+
+        Omit secret fields entirely to keep the stored values.
+
+        - `improvado_assume_role_arn` and `improvado_assume_role_externalid` are managed by
+
+        Improvado and cannot be changed through this endpoint.
+
+        - A successful update resets the connection status and triggers a connection re-check.
+
+
+        See the create endpoint for the full list of `connection_params` fields per destination.'
+      tags:
+      - Destination connections
+      parameters:
+      - in: path
+        name: destination_name
+        schema:
+          type: string
+        required: true
+        description: Destination name
+        examples:
+          destination_connection_update:
+            value:
+              destination_name: s3
+          wrong_destination_name:
+            value:
+              destination_name: wrong_name
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Destination Connection ID
+        examples:
+          destination_connection_update:
+            value:
+              id: 1
+          wrong_destination_name:
+            value:
+              id: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: Connection title
+                connection_params:
+                  type: object
+                  description: 'Connection params to change. Merged at field level with the stored parameters — omitted fields keep their current values.
+
+                    '
+            examples:
+              partial_update:
+                summary: Change a single parameter
+                value:
+                  connection_params:
+                    partition_by: by_month
+              s3_aws_credentials:
+                summary: Rotate S3 AWS credentials
+                value:
+                  title: Destination Connection 1
+                  connection_params:
+                    connection_option: aws_credentials
+                    aws_access_key_id: test
+                    aws_secret_access_key: test
+                    encryption_key: stub
+              s3_role_chaining:
+                summary: Switch S3 connection to role chaining
+                value:
+                  connection_params:
+                    connection_option: role_chaining
+                    assume_role_arn: arn:aws:iam::123456789012:role/improvado-access
+              wrong_destination_name:
+                value:
+                  title: Destination Connection 1
+                  connection_params: {}
+      responses:
+        '200':
+          description: Update a Connection
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_destination_name:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/destinations/{destination_name}/connections/{destination_connection_id}/recheck:
+    put:
+      operationId: api_v3_destination_connection_recheck
+      summary: Check connection status
+      description: Starts a manual status check of a destination connection. If a destination connection has invalid or staled connection credentials – the system will mark this destination connection as invalid for future loads.
+      tags:
+      - Destination connections
+      parameters:
+      - in: path
+        name: destination_name
+        schema:
+          type: string
+        required: true
+        description: Destination name
+        examples:
+          destination_connection_recheck:
+            value:
+              destination_name: google_sheets
+          wrong_destination_name:
+            value:
+              destination_name: wrong_name
+      - in: path
+        name: destination_connection_id
+        schema:
+          type: integer
+        required: true
+        description: Destination Connection ID
+        examples:
+          destination_connection_recheck:
+            value:
+              destination_connection_id: 1
+          wrong_destination_name:
+            value:
+              destination_connection_id: 1
+      responses:
+        '200':
+          description: Recheck a Connection
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_destination_name:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Connection not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      description: Error response object
+      properties:
+        detail:
+          type: string
+          description: Error message
+      examples:
+      - no_auth:
+          value:
+            detail: You do not have permission to perform this action.
+      - invalid_request:
+          value:
+            detail: Invalid request
+      - not_uniq_name:
+          value:
+            detail: Workspace with this title already exists
+    PaginatedDestinationConnectionList:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Number of destination connections
+        next:
+          type: string
+          description: URL to the next page
+        previous:
+          type: string
+          description: URL to the previous page
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DestinationConnection'
+      examples:
+      - destination_connections_list:
+          value:
+            count: 2
+            next: null
+            previous: null
+            results:
+            - id: 1
+              destination:
+                name: google_sheets
+                title: Google Sheets
+                info: Google Sheets destination
+                icons:
+                  res_300x200: https://example.com/icon_300x200.png
+                  res_40x40: https://example.com/icon_40x40.png
+                  res_20x20: https://example.com/icon_20x20.png
+              title: Destination Connection 1
+              updated_at: 2021-01-01 00:00:00+00:00
+              status: active
+              error_text: Error text
+              is_editable: true
+              create_load_for_new_tables: true
+            - id: 2
+              destination:
+                name: google_ads
+                title: Google Ads
+                info: Google Ads destination
+                icons:
+                  res_300x200: https://example.com/icon_300x200.png
+                  res_40x40: https://example.com/icon_40x40.png
+                  res_20x20: https://example.com/icon_20x20.png
+              title: Destination Connection 2
+              updated_at: 2021-01-01 00:00:00+00:00
+              status: active
+              error_text: Error text
+              is_editable: true
+              create_load_for_new_tables: true
+    Connection:
+      type: object
+      description: Connection object
+      properties:
+        id:
+          type: integer
+          description: Connection ID
+        uid:
+          type: string
+          description: Connection UID
+        title:
+          type: string
+          description: Connection title
+        datasource_name:
+          type: string
+          description: Data source name
+        status:
+          type: string
+          description: Connection status
+        created_at:
+          type: string
+          description: Connection creation date
+        updated_at:
+          type: string
+          description: Connection update date
+        accounts_number:
+          type: integer
+          description: Total number of accounts available on this connection (excluding accounts disabled on the data source side).
+        enabled_for_extraction_accounts_number:
+          type: integer
+          description: Number of accounts on this connection that are selected for extraction. Use this to detect connections that have no accounts enabled and prompt the user to select at least one before setting up extractions or loads.
+        accounts_status:
+          type: string
+          description: Accounts status
+        update_accounts_last_successed:
+          type: string
+          description: Last successful accounts update date
+        update_accounts_was_successfull:
+          type: boolean
+          description: Was the last accounts update successful
+      examples:
+      - connection:
+          value:
+            id: 1
+            uid: 12345678-1234-5678-1234-567812345678
+            title: Connection 1
+            datasource_name: google_sheets
+            status: active
+            created_at: 2021-01-01 00:00:00+00:00
+            updated_at: 2021-01-01 00:00:00+00:00
+            accounts_number: 5
+            enabled_for_extraction_accounts_number: 3
+            accounts_status: active
+            update_accounts_last_successed: 2021-01-01 00:00:00+00:00
+            update_accounts_was_successfull: true
+    Destination:
+      type: object
+      description: Destination object
+      properties:
+        name:
+          type: string
+          description: string identifier of destination
+        title:
+          type: string
+          description: Destination title
+        info:
+          type: string
+          description: Destination info
+        icons:
+          type: object
+          properties:
+            res_300x200:
+              type: string
+              description: URL to the 300x200 icon
+            res_40x40:
+              type: string
+              description: URL to the 40x40 icon
+            res_20x20:
+              type: string
+              description: URL to the 20x20 icon
+      examples:
+      - destination:
+          value:
+            name: google_sheets
+            title: Google Sheets
+            info: Google Sheets destination
+            icons:
+              res_300x200: https://example.com/icon_300x200.png
+              res_40x40: https://example.com/icon_40x40.png
+              res_20x20: https://example.com/icon_20x20.png
+    DestinationConnection:
+      type: object
+      description: Destination Connection object
+      properties:
+        id:
+          type: integer
+          description: Destination Connection ID
+        destination:
+          $ref: '#/components/schemas/Destination'
+        title:
+          type: string
+          description: Destination Connection title
+        updated_at:
+          type: string
+          description: Destination Connection update date
+        status:
+          type: string
+          description: Destination Connection status
+        error_text:
+          type: string
+          description: Destination Connection error text
+        is_editable:
+          type: boolean
+          description: Is the Destination Connection editable
+        create_load_for_new_tables:
+          type: boolean
+          description: Create load for new tables
+      examples:
+      - destination_connection:
+          value:
+            id: 1
+            destination:
+              name: google_sheets
+              title: Google Sheets
+              info: Google Sheets destination
+              icons:
+                res_300x200: https://example.com/icon_300x200.png
+                res_40x40: https://example.com/icon_40x40.png
+                res_20x20: https://example.com/icon_20x20.png
+            title: Destination Connection 1
+            updated_at: 2021-01-01 00:00:00+00:00
+            status: active
+            error_text: Error text
+            is_editable: true
+            create_load_for_new_tables: true
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    tokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Bearer
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: dts_session_id
+      description: Cookie authentication. When using this method, the HTTP_X_IM_WORKSPACE_ID header must be included with the workspace_id (integer) value.

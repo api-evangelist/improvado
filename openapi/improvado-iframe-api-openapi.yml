@@ -1,0 +1,298 @@
+openapi: 3.2.0
+info:
+  title: Improvado Embedded API v3 Iframe API
+  version: 3.0.0
+  description: 'Improvado Embedded API V3 provides programmatic access to data extraction, transformation, and loading capabilities.
+
+
+    ## Authentication
+
+
+    This API supports multiple authentication methods depending on the endpoint:
+
+
+    ### Basic Authentication
+
+    Used for workspace-agnostic operations such as:
+
+    - Creating access tokens (`POST /api/v3/token`)
+
+    - Listing workspaces (`GET /api/v3/workspaces`)
+
+    - Managing workspaces (`POST /api/v3/workspaces`, `GET /api/v3/workspaces/{id}`, `PUT /api/v3/workspaces/{id}`)
+
+    - Getting iframe URLs (`POST /api/v3/get_iframe_url`)
+
+    - Listing available recipes (`GET /api/v3/recipes/`)
+
+    etc.
+
+
+    **Format**: `Authorization: Basic `
+
+
+    ### Bearer Token Authentication
+
+    Used for workspace-scoped operations after obtaining a token from `/api/v3/token`. The token is scoped to a specific workspace.
+
+
+    **Format**: `Authorization: Bearer `
+
+
+    ### Cookie Authentication
+
+    Alternative to Bearer token for browser-based integrations. When using cookie authentication, you must include the workspace ID in the request header.
+
+
+    **Cookie**: `dts_session_id=`
+
+
+    **Required Header**: `X-IM-WORKSPACE-ID: `
+
+
+    ## Workspace Scoping
+
+
+    Most API operations are workspace-scoped. After authenticating with Basic Auth, obtain a workspace-specific token using `POST /api/v3/token` with the desired `workspace_id`. This token provides access only to resources within that workspace, ensuring isolation between different customers or projects.
+
+
+    ## Errors
+
+
+    The automated recipe operations under `/api/v3.1/automated-recipe*` and
+
+    `GET /api/v3.1/connections/{connection_id}/accounts/` return errors as
+
+    `{"code": "...", "message": "...", "details": {...}}`. Branch on `code`, never on the
+
+    message text. See Errors for the catalogue of codes and the shape of `details`.
+
+
+    All other operations return errors as `{"detail": "error description"}`.'
+servers:
+- url: https://embedded.improvado.io
+tags:
+- name: iframe
+  x-zudoku-collapsed: true
+  description: 'Generate secure iframe URLs for embedded UI components.
+
+
+    iframe endpoints provide secure, embeddable UI components for:
+
+    - Creating and managing data source connections (OAuth flows, credential input)
+
+    - Configuring destination connections
+
+    - Managing connection settings and permissions
+
+
+    These IFrames handle sensitive operations like authentication in a secure, pre-built UI that you can
+
+    embed directly into your application.'
+paths:
+  /api/v3/get_iframe_url:
+    post:
+      operationId: api_v3_get_iframe_url
+      summary: Get iframe URL
+      description: 'Iframe allows to embed Improvado’s mechanism of creating datasource and destination connections in a safe way (including credentials passing). Datasources and destinations have different connection flows and attributes, Improvado handles this and has embedded all supported flows into iframe. In order to create a new connection within Improvado; call Get iframe url API, embed the iframe into your website so your customers can sign in to a datasource or setup destination connection parameters. After that you will be able to extract and load data using created connections.
+
+
+        ### Account selection
+
+
+        By default the iframe creates the connection as soon as the user authorizes, and that connection syncs every account the credentials give access to.
+
+
+        Append `show_account_selection=True` to the returned URL to split the flow into two steps instead:
+
+
+        1. **Authorization** — the user signs in to the data source. No connection is created yet.
+
+        2. **Account selection** — the accounts reachable with those credentials are listed, and the user either syncs all of them or picks specific ones. The connection is created from that choice.
+
+
+        The `ConnectionCreated` message is posted to the parent window only after the second step, so the connection always exists by the time your page is notified.
+
+
+        Add the parameter yourself — this endpoint does not emit it:
+
+
+        ```
+
+        https://embedded.improvado.io/api/v3/iframe/?code=&type=datasource&name=jira&show_account_selection=True
+
+        ```
+
+
+        Not every data source can list accounts before the connection exists. Where it cannot, the iframe falls back to the default single-step flow and the parameter has no effect.
+
+
+        ### Authentication method
+
+
+        Some data sources offer more than one way to authenticate, for example OAuth through Improvado''s app and OAuth through your own app ("Bring Your Own App"). When a data source has several methods, the iframe shows a chooser above the authorization form, with the data source''s default method preselected. Each method has its own form fields and OAuth flow.
+
+
+        Append `use_default_auth=True` to the returned URL to hide the chooser and always use the default method:
+
+
+        ```
+
+        https://embedded.improvado.io/api/v3/iframe/?code=&type=datasource&name=spotify_ads&use_default_auth=True
+
+        ```
+
+
+        Data sources with a single method never show the chooser, with or without the parameter.'
+      tags:
+      - iframe
+      parameters:
+      - in: query
+        name: show_connectors_list
+        schema:
+          type: boolean
+        description: Shows list of connected connections in iframe (optional parameter)
+        required: false
+        examples:
+          get_iframe_url:
+            value:
+              show_connectors_list: true
+      - in: query
+        name: show_datasources
+        schema:
+          type: boolean
+        description: Shows list of all available data sources for connection (optional parameter)
+        required: false
+        examples:
+          get_iframe_url:
+            value:
+              show_datasources: true
+      - in: query
+        name: show_accounts
+        schema:
+          type: boolean
+        description: Allows to open page for each connection and enable/disable accounts within (optional parameter)
+        required: false
+        examples:
+          get_iframe_url:
+            value:
+              show_accounts: true
+      - in: query
+        name: show_accounts_only_on_auth
+        schema:
+          type: boolean
+        description: Automatically opens page for a connection after authorization. Only works if `show_accounts=False`. (optional parameter)
+        required: false
+        examples:
+          get_iframe_url:
+            value:
+              show_accounts_only_on_auth: true
+      - in: query
+        name: use_default_auth
+        schema:
+          type: boolean
+        description: Hides the authentication method chooser and always uses the data source's default method. See "Authentication method" above. (optional parameter)
+        required: false
+        examples:
+          get_iframe_url:
+            value:
+              use_default_auth: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                workspace_id:
+                  type: integer
+                  description: Workspace ID
+                type:
+                  type: string
+                  description: defines whether you want to create a destination connection or datasource connection. Allowed values are destination or datasource (optional parameter)
+                name:
+                  type: string
+                  description: string identifier of datasource or destination you want to connect to (optional parameter)
+            examples:
+              get_iframe_url:
+                value:
+                  workspace_id: 1
+                  type: datasource
+                  name: google_sheets
+              bad_request:
+                value:
+                  workspace_id: 1
+                  type: wrong_type
+                  name: non-existing datasource
+      responses:
+        '200':
+          description: Get iframe URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    description: iframe URL
+              examples:
+                get_iframe_url:
+                  value:
+                    url: https://embedded.improvado.io/api/v3/iframe/?code=<str>&type=datasource&name=google_sheets&show_connectors_list=True&show_datasources=True&show_accounts=True
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                bad_request:
+                  value:
+                    detail: Bad request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - basicAuth: []
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      description: Error response object
+      properties:
+        detail:
+          type: string
+          description: Error message
+      examples:
+      - no_auth:
+          value:
+            detail: You do not have permission to perform this action.
+      - invalid_request:
+          value:
+            detail: Invalid request
+      - not_uniq_name:
+          value:
+            detail: Workspace with this title already exists
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    tokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Bearer
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: dts_session_id
+      description: Cookie authentication. When using this method, the HTTP_X_IM_WORKSPACE_ID header must be included with the workspace_id (integer) value.

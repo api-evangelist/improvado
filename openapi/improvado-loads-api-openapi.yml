@@ -1,0 +1,1035 @@
+openapi: 3.2.0
+info:
+  title: Improvado Embedded API v3 Loads API
+  version: 3.0.0
+  description: 'Improvado Embedded API V3 provides programmatic access to data extraction, transformation, and loading capabilities.
+
+
+    ## Authentication
+
+
+    This API supports multiple authentication methods depending on the endpoint:
+
+
+    ### Basic Authentication
+
+    Used for workspace-agnostic operations such as:
+
+    - Creating access tokens (`POST /api/v3/token`)
+
+    - Listing workspaces (`GET /api/v3/workspaces`)
+
+    - Managing workspaces (`POST /api/v3/workspaces`, `GET /api/v3/workspaces/{id}`, `PUT /api/v3/workspaces/{id}`)
+
+    - Getting iframe URLs (`POST /api/v3/get_iframe_url`)
+
+    - Listing available recipes (`GET /api/v3/recipes/`)
+
+    etc.
+
+
+    **Format**: `Authorization: Basic `
+
+
+    ### Bearer Token Authentication
+
+    Used for workspace-scoped operations after obtaining a token from `/api/v3/token`. The token is scoped to a specific workspace.
+
+
+    **Format**: `Authorization: Bearer `
+
+
+    ### Cookie Authentication
+
+    Alternative to Bearer token for browser-based integrations. When using cookie authentication, you must include the workspace ID in the request header.
+
+
+    **Cookie**: `dts_session_id=`
+
+
+    **Required Header**: `X-IM-WORKSPACE-ID: `
+
+
+    ## Workspace Scoping
+
+
+    Most API operations are workspace-scoped. After authenticating with Basic Auth, obtain a workspace-specific token using `POST /api/v3/token` with the desired `workspace_id`. This token provides access only to resources within that workspace, ensuring isolation between different customers or projects.
+
+
+    ## Errors
+
+
+    The automated recipe operations under `/api/v3.1/automated-recipe*` and
+
+    `GET /api/v3.1/connections/{connection_id}/accounts/` return errors as
+
+    `{"code": "...", "message": "...", "details": {...}}`. Branch on `code`, never on the
+
+    message text. See Errors for the catalogue of codes and the shape of `details`.
+
+
+    All other operations return errors as `{"detail": "error description"}`.'
+servers:
+- url: https://embedded.improvado.io
+tags:
+- name: Loads
+  x-zudoku-collapsed: true
+  description: 'Configure and manage data loading from data tables to destinations.
+
+
+    Load orders define the rules and settings for how data moves from Improvado''s data tables
+
+    to your destination systems. This includes:
+
+    - Source data table selection
+
+    - Destination connection and target location
+
+    - Load schedule and frequency
+
+    - Data transformation and mapping rules
+
+    - Load mode (full refresh, incremental, etc.)
+
+
+    Loads ensure your data is automatically synchronized from Improvado to your destination on the schedule you define.'
+paths:
+  /api/v3/loads:
+    get:
+      operationId: api_v3_loads_list
+      summary: List loads
+      description: List all loads
+      tags:
+      - Loads
+      parameters:
+      - in: query
+        name: data_table_id
+        schema:
+          type: integer
+        required: false
+        description: Data Table ID
+        examples:
+          loads_list:
+            value:
+              data_table_id: 1
+      - in: query
+        name: destination_connection_id
+        schema:
+          type: string
+        required: false
+        description: Destination Connection ID
+        examples:
+          loads_list:
+            value:
+              destination_connection_id: '123'
+      - in: query
+        name: destination_name
+        schema:
+          type: string
+        required: false
+        description: Destination Name
+        examples:
+          loads_list:
+            value:
+              destination_name: GBQ
+      responses:
+        '200':
+          description: Get a list of Loads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaginatedLoadList'
+              examples:
+                loads_list:
+                  value:
+                    count: 2
+                    next: null
+                    previous: null
+                    results:
+                    - id: 1
+                      data_table:
+                        id: 1
+                        title: Table 1
+                        datasource_name: google_sheets
+                      destination_connection:
+                        id: 1
+                        title: Destination Connection 1
+                        destination_name: google_sheets
+                      destination_table: table_1
+                      run_policy: after extraction
+                      schedules:
+                      - days: 1
+                        hours: 1
+                        minutes: 1
+                        interval: daily
+                        timezone: UTC
+                        lookback_window:
+                          name: 1 day
+                      status: active
+                      last_update: 2021-01-01 00:00:00+00:00
+                      error_text: Error text
+                      uploaded_rows_count: 1
+                    - id: 2
+                      data_table:
+                        id: 2
+                        title: Table 2
+                        datasource_name: google_ads
+                      destination_connection:
+                        id: 2
+                        title: Destination Connection 2
+                        destination_name: google_ads
+                      destination_table: table_2
+                      run_policy: after extraction
+                      schedules:
+                      - days: 1
+                        hours: 1
+                        minutes: 1
+                        interval: daily
+                        timezone: UTC
+                        lookback_window:
+                          name: 1 day
+                      status: active
+                      last_update: 2021-01-01 00:00:00+00:00
+                      error_text: Error text
+                      uploaded_rows_count: 1
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    post:
+      parameters: []
+      operationId: api_v3_load_create
+      summary: Create a load
+      description: 'Creates a new load. A load creation request is composed of Data Table and Destination Connection data.
+
+
+        **Validation rules:**
+
+        - When `run_policy` is `"schedule"`, `schedules` must contain at least one entry.
+
+        - When `run_policy` is `"after extraction"`, `schedules` must be empty or omitted.'
+      tags:
+      - Loads
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data_table_id
+              - destination_connection_id
+              - destination_table
+              - run_policy
+              properties:
+                data_table_id:
+                  type: integer
+                  description: Data Table ID
+                destination_connection_id:
+                  type: string
+                  format: uuid
+                  description: Destination Connection ID (UUID)
+                destination_table:
+                  type: string
+                  description: Destination Table
+                run_policy:
+                  type: string
+                  enum:
+                  - after extraction
+                  - schedule
+                  description: 'When the load runs:
+
+                    - `after extraction` — runs automatically after the related extract finishes.
+
+                    - `schedule` — runs on the recurring schedule(s) defined in `schedules`.
+
+                    '
+                schedules:
+                  type: array
+                  description: Required when `run_policy` is `schedule`. Must be empty or omitted when `run_policy` is `after extraction`.
+                  items:
+                    $ref: '#/components/schemas/Scheduling'
+                load_historical_data:
+                  type: boolean
+                  default: false
+                  description: When `true`, the initial load run will backfill historical data for the data table.
+            examples:
+              load_create:
+                value:
+                  data_table_id: 1
+                  destination_connection_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  destination_table: table_1
+                  run_policy: after extraction
+                  load_historical_data: true
+              load_create_scheduled:
+                value:
+                  data_table_id: 1
+                  destination_connection_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  destination_table: table_1
+                  run_policy: schedule
+                  schedules:
+                  - days: 0
+                    hours: 9
+                    minutes: 30
+                    interval: day
+                    timezone: UTC
+                  load_historical_data: false
+      responses:
+        '200':
+          description: Create a Load
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Load'
+              examples:
+                load_create:
+                  value:
+                    id: 1
+                    data_table:
+                      id: 1
+                      title: Table 1
+                      datasource_name: google_sheets
+                    destination_connection:
+                      id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                      title: Destination Connection 1
+                      destination_name: google_sheets
+                    destination_table: table_1
+                    run_policy: after extraction
+                    schedules: []
+                    status: active
+                    last_update: 2021-01-01 00:00:00+00:00
+                    error_text: ''
+                    uploaded_rows_count: 0
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/loads/{load_id}:
+    get:
+      operationId: api_v3_load_retrieve
+      summary: Get a load
+      description: Get detailed info about load
+      tags:
+      - Loads
+      parameters:
+      - in: path
+        name: load_id
+        schema:
+          type: integer
+        required: true
+        description: Load ID
+        examples:
+          load_retrieve:
+            value:
+              load_id: 1
+      responses:
+        '200':
+          description: Get a Load
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Load'
+              examples:
+                load_retrieve:
+                  value:
+                    id: 1
+                    data_table:
+                      id: 1
+                      title: Table 1
+                      datasource_name: google_sheets
+                    destination_connection:
+                      id: 1
+                      title: Destination Connection 1
+                      destination_name: google_sheets
+                    destination_table: table_1
+                    run_policy: after extraction
+                    schedules:
+                    - days: 1
+                      hours: 1
+                      minutes: 1
+                      interval: daily
+                      timezone: UTC
+                      lookback_window:
+                        name: 1 day
+                    status: active
+                    last_update: 2021-01-01 00:00:00+00:00
+                    error_text: Error text
+                    uploaded_rows_count: 1
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_load_id:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Load not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    put:
+      operationId: api_v3_load_update
+      summary: Update a load
+      description: Allows to update load run policy or scheduling
+      tags:
+      - Loads
+      parameters:
+      - in: path
+        name: load_id
+        schema:
+          type: integer
+        required: true
+        description: Load ID
+        examples:
+          load_update:
+            value: 1
+          missing_title:
+            value: 1
+          not_uniq_name:
+            value: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - run_policy
+              properties:
+                run_policy:
+                  type: string
+                  enum:
+                  - after extraction
+                  - schedule
+                  description: 'When the load runs:
+
+                    - `after extraction` — runs automatically after the related extract finishes.
+
+                    - `schedule` — runs on the recurring schedule(s) defined in `schedules`.
+
+                    '
+                schedules:
+                  type: array
+                  description: Required when `run_policy` is `schedule`. Must be empty or omitted when `run_policy` is `after extraction`.
+                  items:
+                    $ref: '#/components/schemas/Scheduling'
+            examples:
+              load_update:
+                value:
+                  run_policy: schedule
+                  schedules:
+                  - days: 0
+                    hours: 9
+                    minutes: 30
+                    interval: day
+                    timezone: UTC
+              missing_title:
+                value:
+                  wrong_field: Extract 1
+      responses:
+        '200':
+          description: Update a Load
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Load'
+              examples:
+                load_update:
+                  value:
+                    id: 1
+                    data_table:
+                      id: 1
+                      title: Table 1
+                      datasource_name: google_sheets
+                    destination_connection:
+                      id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                      title: Destination Connection 1
+                      destination_name: google_sheets
+                    destination_table: table_1
+                    run_policy: schedule
+                    schedules:
+                    - days: 0
+                      hours: 9
+                      minutes: 30
+                      interval: day
+                      timezone: UTC
+                    status: active
+                    last_update: 2021-01-01 00:00:00+00:00
+                    error_text: ''
+                    uploaded_rows_count: 1
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_title:
+                  value:
+                    detail: Invalid request
+                not_uniq_name:
+                  value:
+                    detail: Load with this title already exists
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+    delete:
+      operationId: api_v3_load_delete
+      summary: Delete a load
+      description: Allows to delete load. Already loaded data will remain in customer’s destination.
+      tags:
+      - Loads
+      parameters:
+      - in: path
+        name: load_id
+        schema:
+          type: integer
+        required: true
+        description: Load ID
+        examples:
+          load_delete:
+            value:
+              load_id: 1
+      responses:
+        '204':
+          description: Delete a Load
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_load_id:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Load not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/loads/{id}/pause:
+    put:
+      operationId: api_v3_load_pause
+      summary: Pause a load
+      description: Allows to pause load so it will not load data to customer’s destination until it is unpaused.
+      tags:
+      - Loads
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Load ID
+        examples:
+          load_pause:
+            value:
+              id: 1
+      responses:
+        '204':
+          description: Pause a Load
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_load_id:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Load not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/loads/{id}/unpause:
+    put:
+      operationId: api_v3_load_unpause
+      summary: Unpause a load
+      description: Allows to unpaused load so it will continue to load data to customer’s destination.
+      tags:
+      - Loads
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Load ID
+        examples:
+          load_unpause:
+            value:
+              id: 1
+      responses:
+        '204':
+          description: Unpause a Load
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_load_id:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Load not found
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+  /api/v3/loads/{id}/run:
+    put:
+      operationId: api_v3_load_run
+      summary: Run a load
+      description: 'Allows to manually run data load into customer’s destination.
+
+        Optionally provide `date_from` and `date_to` in the request body to run the load
+
+        for a specific date range. Both fields must be provided together.
+
+        Date range is ignored for loads by accounts.'
+      tags:
+      - Loads
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Load ID
+        examples:
+          load_run:
+            value:
+              id: 1
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date_from:
+                  type: string
+                  format: date
+                  description: Start date for the load run (YYYY-MM-DD). Must be used together with date_to.
+                  examples:
+                  - 2024-01-01
+                date_to:
+                  type: string
+                  format: date
+                  description: End date for the load run (YYYY-MM-DD). Must be used together with date_from.
+                  examples:
+                  - 2024-01-31
+            examples:
+              with_date_range:
+                summary: Run load for a specific date range
+                value:
+                  date_from: 2024-01-01
+                  date_to: 2024-01-31
+              without_date_range:
+                summary: Run load without date range (default behavior)
+                value: {}
+      responses:
+        '204':
+          description: Run a Load
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_load_id:
+                  value:
+                    detail: Invalid request
+        '401':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_auth:
+                  value:
+                    detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    detail: Load not found
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      description: Error response object
+      properties:
+        detail:
+          type: string
+          description: Error message
+      examples:
+      - no_auth:
+          value:
+            detail: You do not have permission to perform this action.
+      - invalid_request:
+          value:
+            detail: Invalid request
+      - not_uniq_name:
+          value:
+            detail: Workspace with this title already exists
+    DataTable:
+      type: object
+      description: Data Table object
+      properties:
+        id:
+          type: integer
+          description: Data Table ID
+        title:
+          type: string
+          description: Data Table title
+        datasource_name:
+          type: string
+          description: Data source name
+      examples:
+      - data_table:
+          value:
+            id: 1
+            title: Table 1
+            datasource_name: google_sheets
+    PaginatedLoadList:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Number of loads
+        next:
+          type: string
+          description: URL to the next page
+        previous:
+          type: string
+          description: URL to the previous page
+        results:
+          type: array
+          description: List of Loads
+          items:
+            $ref: '#/components/schemas/Load'
+      examples:
+      - loads_list:
+          value:
+            count: 2
+            next: null
+            previous: null
+            results:
+            - id: 1
+              data_table:
+                id: 1
+                title: Table 1
+                datasource_name: google_sheets
+              destination_connection:
+                id: 1
+                title: Destination Connection 1
+                destination_name: google_sheets
+              destination_table: table_1
+              run_policy: after extraction
+              schedules:
+              - days: 1
+                hours: 1
+                minutes: 1
+                interval: daily
+                timezone: UTC
+                lookback_window:
+                  name: 1 day
+              status: active
+              last_update: 2021-01-01 00:00:00+00:00
+              error_text: Error text
+              uploaded_rows_count: 1
+            - id: 2
+              data_table:
+                id: 2
+                title: Table 2
+                datasource_name: google_ads
+              destination_connection:
+                id: 2
+                title: Destination Connection 2
+                destination_name: google_ads
+              destination_table: table_2
+              run_policy: after extraction
+              schedules:
+              - days: 1
+                hours: 1
+                minutes: 1
+                interval: daily
+                timezone: UTC
+                lookback_window:
+                  name: 1 day
+              status: active
+              last_update: 2021-01-01 00:00:00+00:00
+              error_text: Error text
+              uploaded_rows_count: 1
+    Load:
+      type: object
+      description: Load object
+      properties:
+        id:
+          type: integer
+          description: Load ID
+        data_table:
+          $ref: '#/components/schemas/DataTable'
+        destination_connection:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              description: Destination Connection ID (UUID)
+            title:
+              type: string
+              description: Destination Connection title
+            destination_name:
+              type: string
+              description: Destination name
+        destination_table:
+          type: string
+          description: Destination table name
+        run_policy:
+          type: string
+          enum:
+          - after extraction
+          - schedule
+          description: Load run policy
+        schedules:
+          type: array
+          items:
+            $ref: '#/components/schemas/Scheduling'
+        status:
+          type: string
+          description: Load status
+        last_update:
+          type: string
+          description: Last update date
+        error_text:
+          type: string
+          description: Error text
+        uploaded_rows_count:
+          type: integer
+          description: Number of uploaded rows
+      examples:
+      - load:
+          value:
+            id: 1
+            data_table:
+              id: 1
+              title: Table 1
+              datasource_name: google_sheets
+            destination_connection:
+              id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+              title: Destination Connection 1
+              destination_name: google_sheets
+            destination_table: table_1
+            run_policy: after extraction
+            schedules: []
+            status: active
+            last_update: 2021-01-01 00:00:00+00:00
+            error_text: ''
+            uploaded_rows_count: 1
+    Scheduling:
+      type: object
+      description: Scheduling object
+      properties:
+        days:
+          type: integer
+          minimum: 0
+          description: 'Day offset within the interval, starting from 0. The valid range depends on `interval`:
+
+            - `hour`, `day` — must be 0
+
+            - `week` — 0–6 (day of week)
+
+            - `month` — 0–30 (day of month)
+
+            '
+        hours:
+          type: integer
+          minimum: 0
+          maximum: 23
+          description: Hour at which the run will start (0–23)
+        minutes:
+          type: integer
+          minimum: 0
+          maximum: 59
+          description: Minute of hour at which the run will start (0–59)
+        interval:
+          type: string
+          enum:
+          - hour
+          - day
+          - week
+          - month
+          description: 'Frequency at which the run will be performed:
+
+            - `hour` — every hour
+
+            - `day` — once per day
+
+            - `week` — once per week
+
+            - `month` — once per month
+
+            '
+        timezone:
+          type: string
+          default: UTC
+          description: IANA timezone name (e.g. `UTC`, `America/New_York`) the schedule is interpreted in.
+        recurrence:
+          type: integer
+          default: 1
+          description: How often the schedule repeats within the interval. Defaults to 1.
+        lookback_window:
+          type: object
+          description: 'Defines the period data will be extracted for. Applies to extract schedules only — ignored for load schedules.
+
+            '
+          properties:
+            name:
+              type: string
+              enum:
+              - default
+              - live
+              - max
+              description: 'Lookback window preset:
+
+                - `default` — past 30 days from the day of extract
+
+                - `live` — past 1 day from the day of extract
+
+                - `max` — past 60 days from the day of extract
+
+                '
+      examples:
+      - scheduling:
+          value:
+            days: 1
+            hours: 1
+            minutes: 1
+            interval: day
+            timezone: UTC
+            lookback_window:
+              name: default
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    tokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Bearer
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: dts_session_id
+      description: Cookie authentication. When using this method, the HTTP_X_IM_WORKSPACE_ID header must be included with the workspace_id (integer) value.
