@@ -7,26 +7,13 @@ checked:
 - https://www.antler.co/portfolio
 - https://www.techstars.com/portfolio
 - https://www.ycombinator.com/companies
+- hubspot/integrations/hubspot-integration-edges.yml
+- https://advertising.amazon.com/partners/directory
+- https://sellercentral.amazon.com/gspn
+- https://sellercentral.amazon.com/selling-partner-appstore
 source:
 - zendesk/integrations/zendesk-integration-edges.yml
 edges:
-- partner_name: Zendesk (own)
-  partner: zendesk
-  partner_match: mirror
-  mirror_match: domain
-  type: marketplace
-  relationship: platform-app
-  direction: third-party
-  channel: partner-built
-  marketplace: own
-  evidence: https://www.zendesk.com/marketplace/apps/support/1277357/improvado/
-  mirror_of: zendesk/integrations/zendesk-integration-edges.yml
-  apps:
-  - Improvado
-  listing_count: 1
-  detected: '2026-10-19'
-  detected_by: mirror-platform-listings.py
-  category: CRM and Marketing
 - partner_name: 500 Global
   partner: 500-global
   partner_match: register
@@ -54,3 +41,80 @@ edges:
     year: '2017'
   detected_by: sweep-accelerator-portfolios.py
   first_seen: '2026-10-21'
+- partner_name: Zendesk (own)
+  partner: zendesk
+  partner_match: mirror
+  mirror_match: domain
+  type: marketplace
+  relationship: platform-app
+  direction: third-party
+  channel: partner-built
+  marketplace: own
+  evidence: https://www.zendesk.com/marketplace/apps/support/1277357/improvado/
+  mirror_of: zendesk/integrations/zendesk-integration-edges.yml
+  apps:
+  - Improvado
+  listing_count: 1
+  detected: '2026-10-19'
+  detected_by: mirror-platform-listings.py
+  category: CRM and Marketing
+- partner_name: HubSpot (own)
+  partner: hubspot
+  partner_match: mirror
+  mirror_match: domain
+  type: marketplace
+  relationship: platform-app
+  direction: third-party
+  channel: partner-built
+  marketplace: own
+  evidence: https://ecosystem.hubspot.com/marketplace/listing/improvado-179900
+  mirror_of: hubspot/integrations/hubspot-integration-edges.yml
+  apps:
+  - Improvado
+  listing_count: 1
+  detected: '2026-10-21'
+  detected_by: mirror-platform-listings.py
+  category: MARKETING_ANALYTICS
+- partner_name: Amazon Ads Partner Directory
+  partner: amazon
+  partner_match: register
+  type: register
+  channel: standard-directory
+  relationship: standard-participant
+  direction: partner-built
+  evidence: https://advertising.amazon.com/partners/directory
+  category: Amazon Ads partner (services)
+  contract_reference:
+    register: Amazon Ads Partner Directory (advertising.amazon.com/partners/directory, GetPartners)
+    registered_name: Improvado
+    register_id: amzn1.ads1.ma1.1s9gyzqs1to7nwm1ohuoka7iv
+    matched_domain: improvado.io
+    matched_by: domain
+    services:
+    - ADVERTISING_EFFECTIVENESS
+    - AUDIENCE_MEASUREMENT
+    - AUDIO_MEASUREMENT
+    - BUSINESS_AND_MARKETING_INTELLIGENCE_TOOLS
+    - CAMPAIGN_MONITORING
+    - CAMPAIGN_REPORTING
+    - CUSTOMER_DATA_PLATFORM
+    - DATA_CONNECTORS
+    - DATA_INTEGRATION
+    - REPORTING_AND_ANALYTICS
+    - VIDEO_MEASUREMENT
+    ads_products:
+    - AMAZON_DSP
+    - SPONSORED_BRANDS
+    - SPONSORED_DISPLAY
+    - SPONSORED_PRODUCTS
+    - VIDEO_ADS
+    service_models:
+    - TOOL_PROVIDER
+    signal_note: listing = participation; accreditation recorded as partner_tier; ads_certifications are Amazon
+      Ads LEARNING certifications held by staff, not product conformance, never certified_products
+    detected_by: sweep-amazon-sp-api-appstore.py
+    detected: '2026-10-21'
+  detected_by: sweep-amazon-sp-api-appstore.py
+  detected: '2026-10-21'
+  partner_tier:
+  - VERIFIED_PARTNER
