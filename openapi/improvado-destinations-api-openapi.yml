@@ -245,3 +245,9 @@ components:
       in: cookie
       name: dts_session_id
       description: Cookie authentication. When using this method, the HTTP_X_IM_WORKSPACE_ID header must be included with the workspace_id (integer) value.
+x-provenance:
+  method: harvested
+  publisher: Improvado
+  source: https://developers.improvado.io/openapi.yaml
+  note: split by refine-openapis from the provider's own published document, verified by fetch (openapi/_original/*.fetch.json);
+    stamped by stamp-openapi-provenance.py (roadmap#793)
